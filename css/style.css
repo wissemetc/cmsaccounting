@@ -1877,9 +1877,22 @@
 
         .footer-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 40px;
             margin-bottom: 20px;
+        }
+
+        .footer-column {
+            min-width: 0;
+        }
+
+        .footer-column p {
+            color: rgba(255, 255, 255, 0.9);
+            line-height: 1.6;
+            font-size: 0.9rem;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
 
         .footer-column h3 {
@@ -2990,8 +3003,21 @@
         @media (max-width: 992px) {
             .nav-menu { display: none; }
             .mobile-menu-btn { display: block; }
-            .appointment-container { grid-template-columns: 1fr; gap: var(--spacing-xl); }
-            .form-container, .calendar-widget { position: static; }
+            .appointment-container {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-xl);
+                display: flex;
+                flex-direction: column;
+            }
+            /* CALENDRIER EN PREMIER SUR MOBILE */
+            .calendar-widget {
+                order: 1;
+                position: static;
+            }
+            .form-container {
+                order: 2;
+                position: static;
+            }
             .cabinet-parallel-layout { grid-template-columns: 1fr; gap: var(--spacing-lg); }
             .hero-stats { grid-template-columns: 1fr; gap: var(--spacing-lg); }
             .top-bar-contact { flex-wrap: wrap; gap: var(--spacing-sm); }
@@ -3024,8 +3050,35 @@
             .form-container, .calendar-widget { padding: var(--spacing-lg); }
             .cabinet-left-column, .cabinet-right-column { padding: var(--spacing-lg); }
             .cabinet-text-block h3 { font-size: 1.8rem; }
-            .footer-grid { gap: var(--spacing-xl); }
+            .footer-grid {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-xl);
+            }
             .time-slots { grid-template-columns: repeat(2, 1fr); }
+
+            /* ACTUALITÉS MOBILE - Texte complet visible */
+            .news-card-simple {
+                padding: var(--spacing-lg);
+            }
+            .news-card-simple h3 {
+                font-size: 1.1rem;
+                padding-right: 70px;
+            }
+            .news-card-simple p {
+                font-size: 0.9rem;
+                line-height: 1.5;
+            }
+            .news-date-badge {
+                top: 15px;
+                right: 15px;
+                padding: 8px 12px;
+            }
+            .news-date-badge .day {
+                font-size: 1.2rem;
+            }
+            .news-date-badge .month {
+                font-size: 0.65rem;
+            }
             .process-steps {
                 grid-template-columns: 1fr;
                 gap: var(--spacing-lg);
@@ -3092,7 +3145,28 @@
             .section-title h2 { font-size: 1.8rem; }
             .btn { padding: 0.8rem 1.5rem; }
             .service-options { grid-template-columns: 1fr; }
-            .footer-newsletter .newsletter-form { flex-direction: column; }
+
+            /* FOOTER NEWSLETTER MOBILE */
+            .footer-newsletter .newsletter-form {
+                flex-direction: column;
+            }
+            .newsletter-input {
+                width: 100%;
+                padding: 12px 15px;
+                font-size: 0.95rem;
+            }
+            .newsletter-button {
+                width: 100%;
+                padding: 12px 15px;
+                font-size: 0.95rem;
+            }
+            .footer-column h3 {
+                font-size: 1.1rem;
+            }
+            .footer-column p {
+                font-size: 0.85rem;
+            }
+
             .contact-info { flex-direction: column; gap: var(--spacing-sm); text-align: center; }
             .cabinet-value-item { flex-direction: column; text-align: center; gap: 1rem; }
             .cabinet-value-item .value-icon { margin: 0 auto; }
