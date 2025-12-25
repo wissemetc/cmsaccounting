@@ -1,5 +1,5 @@
 /**
- * Netlify Function : Récupère les disponibilités Cal.com (API v2)
+ * Netlify Function : Récupère les disponibilités Cal.com (API v1)
  * Endpoint : /.netlify/functions/get-availability
  */
 
@@ -22,86 +22,42 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { dateFrom, dateTo, eventTypeSlug } = JSON.parse(event.body || "{}");
+    const { dateFrom, dateTo } = JSON.parse(event.body || "{}");
 
     const CALCOM_API_KEY = process.env.CALCOM_API_KEY;
-    const CALCOM_EVENT_SLUG =
-      eventTypeSlug || process.env.CALCOM_EVENT_SLUG || "consultation-30min";
+    const EVENT_TYPE_ID = process.env.CALCOM_EVENT_TYPE_ID;
 
-    if (!CALCOM_API_KEY) {
+    if (!CALCOM_API_KEY || !EVENT_TYPE_ID) {
       return {
         statusCode: 500,
         headers,
         body: JSON.stringify({
           success: false,
-          error: "CALCOM_API_KEY not configured",
-        }),
-      };
-    }
-
-    const calHeaders = {
-      Authorization: `Bearer ${CALCOM_API_KEY}`,
-      "Content-Type": "application/json",
-      "cal-api-version": "2024-06-14",
-    };
-
-    /* ===========================
-       1️⃣ Fetch event types (v2)
-    =========================== */
-    const eventTypesRes = await fetch(
-      "https://api.cal.com/v2/event-types",
-      { headers: calHeaders }
-    );
-
-    if (!eventTypesRes.ok) {
-      const text = await eventTypesRes.text();
-      throw new Error(`Event types error ${eventTypesRes.status}: ${text}`);
-    }
-
-    const eventTypesJson = await eventTypesRes.json();
-
-    // v2 returns { status, data: [...] }
-    const eventTypes = eventTypesJson.data || [];
-
-    const eventType = eventTypes.find(
-      (et) => et.slug === CALCOM_EVENT_SLUG
-    );
-
-    if (!eventType) {
-      return {
-        statusCode: 404,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: "Event type not found",
-          requestedSlug: CALCOM_EVENT_SLUG,
-          availableSlugs: eventTypes.map((e) => e.slug),
+          error: "Missing CALCOM_API_KEY or CALCOM_EVENT_TYPE_ID",
         }),
       };
     }
 
     /* ===========================
-       2️⃣ Fetch availability (v2)
+       1️⃣ Build date range
     =========================== */
-    const params = new URLSearchParams({
-      eventTypeId: eventType.id.toString(),
-      startTime: dateFrom || new Date().toISOString(),
-      endTime:
-        dateTo ||
-        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-      timeZone: "Africa/Tunis",
-    });
+    const start = dateFrom || new Date().toISOString().split("T")[0];
+    const end =
+      dateTo ||
+      new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
 
-    const availabilityRes = await fetch(
-      `https://api.cal.com/v2/availability?${params}`,
-      { headers: calHeaders }
-    );
+    /* ===========================
+       2️⃣ Fetch availability (API v1)
+    =========================== */
+    const url = `https://api.cal.com/v1/slots?apiKey=${CALCOM_API_KEY}&eventTypeId=${EVENT_TYPE_ID}&startTime=${start}&endTime=${end}`;
+
+    const availabilityRes = await fetch(url);
 
     if (!availabilityRes.ok) {
       const text = await availabilityRes.text();
-      throw new Error(
-        `Availability error ${availabilityRes.status}: ${text}`
-      );
+      throw new Error(`Availability error ${availabilityRes.status}: ${text}`);
     }
 
     const availabilityData = await availabilityRes.json();
@@ -114,12 +70,7 @@ exports.handler = async (event, context) => {
       headers,
       body: JSON.stringify({
         success: true,
-        eventType: {
-          id: eventType.id,
-          slug: eventType.slug,
-          title: eventType.title,
-          length: eventType.lengthInMinutes,
-        },
+        eventTypeId: EVENT_TYPE_ID,
         availability: availabilityData,
       }),
     };
