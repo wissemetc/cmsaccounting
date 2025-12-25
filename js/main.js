@@ -307,11 +307,12 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 return [];
             }
 
-            // Filtrer les créneaux pour la date donnée
-            const dateSlots = state.calcomAvailability.slots.filter(slot => {
-                const slotDate = new Date(slot.time).toISOString().split('T')[0];
-                return slotDate === dateString;
-            });
+            // Les slots sont un objet avec des dates comme clés (API v1 Cal.com)
+            const dateSlots = state.calcomAvailability.slots[dateString];
+
+            if (!dateSlots || !Array.isArray(dateSlots)) {
+                return [];
+            }
 
             // Extraire uniquement les heures au format HH:MM
             return dateSlots.map(slot => {
