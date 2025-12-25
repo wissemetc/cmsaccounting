@@ -196,9 +196,9 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             CABINET_PHONE: "+216 53 810 911",
             CABINET_ADDRESS: "Avenue Farhat Hached, Bouhajla Kairouan 3180",
             // Configuration Cal.com
-            CALCOM_API_KEY: "cal_live_xxxxxxxxxxxxxxx", // ⚠️ REMPLACEZ PAR VOTRE VRAIE CLÉ API
-            CALCOM_USERNAME: "mohamedshili",
-            CALCOM_EVENT_SLUG: "consultation-30min",
+            CALCOM_API_KEY: "cal_live_92f0e4e18b01ac9a68226280d046cce3", // ⚠️ REMPLACEZ PAR VOTRE VRAIE CLÉ API
+            CALCOM_USERNAME: "cmsaccounting.tn",
+            CALCOM_EVENT_SLUG: "30min",
             CALCOM_API_URL: "https://api.cal.com/v1"
         };
 
