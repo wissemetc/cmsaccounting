@@ -182,7 +182,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         // ===== CONFIGURATION AMÉLIORÉE DU CALENDRIER =====
         const APPOINTMENT_CONFIG = {
             APPOINTMENT_DURATION: 30,
-            WORKING_HOURS: { 
+            WORKING_HOURS: {
                 start: 8.5,
                 end: 15.5
             },
@@ -194,7 +194,12 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             SITE_NAME: "CMS Comptable Tunisie",
             BUSINESS_EMAIL: "contact@cmscomptable.tn",
             CABINET_PHONE: "+216 53 810 911",
-            CABINET_ADDRESS: "Avenue Farhat Hached, Bouhajla Kairouan 3180"
+            CABINET_ADDRESS: "Avenue Farhat Hached, Bouhajla Kairouan 3180",
+            // Configuration Cal.com
+            CALCOM_API_KEY: "cal_live_xxxxxxxxxxxxxxx", // ⚠️ REMPLACEZ PAR VOTRE VRAIE CLÉ API
+            CALCOM_USERNAME: "mohamedshili",
+            CALCOM_EVENT_SLUG: "consultation-30min",
+            CALCOM_API_URL: "https://api.cal.com/v1"
         };
 
         // ===== ÉTAT GLOBAL =====
@@ -1208,15 +1213,33 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         async function processAppointment(formData) {
+            // 1. Créer la réservation sur Cal.com (source de vérité principale)
+            let calcomBooking = null;
+            try {
+                console.log('📅 Création de la réservation sur Cal.com...');
+                calcomBooking = await window.createCalcomBooking(formData);
+                console.log('✅ Réservation Cal.com créée avec succès:', calcomBooking);
+            } catch (calcomError) {
+                console.error('❌ Erreur lors de la création sur Cal.com:', calcomError);
+                throw new Error('Impossible de créer la réservation. Le créneau n\'est peut-être plus disponible. Veuillez réessayer.');
+            }
+
+            // 2. Sauvegarder localement comme backup (synchronisé avec Cal.com)
             const slotKey = saveReservedSlot(formData.date, formData.time, {
                 clientName: formData.name,
                 clientEmail: formData.email,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                calcomBookingId: calcomBooking?.id || null
             });
-            
-            state.appointments[slotKey] = formData;
+
+            state.appointments[slotKey] = {
+                ...formData,
+                calcomBookingId: calcomBooking?.id || null,
+                calcomBookingUid: calcomBooking?.uid || null
+            };
             localStorage.setItem('cms_appointments', JSON.stringify(state.appointments));
-            
+
+            // 3. Mettre à jour l'interface
             const timeSlot = document.querySelector(`.time-slot[data-time="${formData.time}"]`);
             if (timeSlot && !timeSlot.classList.contains('disabled')) {
                 timeSlot.classList.remove('selected');
@@ -1224,17 +1247,18 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 timeSlot.title = 'Déjà réservé';
                 timeSlot.style.cursor = 'not-allowed';
             }
-            
+
+            // 4. Envoyer les emails de confirmation (optionnel car Cal.com envoie déjà)
             try {
                 await sendEmails(formData);
-                console.log('✅ Emails envoyés avec succès');
+                console.log('✅ Emails de confirmation envoyés');
             } catch (emailError) {
-                console.warn('⚠️ Erreur lors de l\'envoi des emails:', emailError);
+                console.warn('⚠️ Emails non envoyés (Cal.com a déjà envoyé une confirmation):', emailError);
             }
-            
+
             updateCalendarAvailability();
-            
-            return Promise.resolve();
+
+            return Promise.resolve(calcomBooking);
         }
 
         function updateCalendarAvailability() {

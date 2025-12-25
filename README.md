@@ -11,7 +11,7 @@ cmsaccounting/
 │   └── style.css              # Feuille de style principale
 ├── js/
 │   ├── main.js                # Scripts principaux
-│   └── zoho-integration.js    # Intégration Zoho Calendar
+│   └── zoho-integration.js    # Intégration Cal.com (réservations)
 ├── assets/
 │   └── images/                # Images et logos
 ├── CONFIGURATION-ZOHO.md      # Guide de configuration Zoho
@@ -65,22 +65,29 @@ cmsaccounting/
    - Connectez votre repository
    - Le site sera automatiquement déployé
 
-## 📅 Configuration Zoho Calendar
+## 📅 Configuration Cal.com (Système de Réservation)
 
-Pour intégrer vos rendez-vous avec Zoho Calendar, consultez le guide complet:
-👉 **[CONFIGURATION-ZOHO.md](CONFIGURATION-ZOHO.md)**
+Pour intégrer vos rendez-vous avec Cal.com, consultez le guide complet:
+👉 **[CALCOM_SETUP.md](CALCOM_SETUP.md)**
 
 ### Configuration Rapide
 
-1. Créez un compte sur [Zoho Bookings](https://www.zoho.com/bookings/)
-2. Configurez vos services et disponibilités
-3. Obtenez votre URL de réservation
-4. Modifiez `js/zoho-integration.js`:
+1. Créez un compte gratuit sur [Cal.com](https://cal.com)
+2. Créez un Event Type (ex: "Consultation 30 min")
+3. Connectez votre calendrier Zoho à Cal.com
+4. Obtenez votre clé API : Settings → Developer → API Keys
+5. Modifiez `js/main.js` (ligne ~199):
    ```javascript
-   const ZOHO_CONFIG = {
-       bookingsUrl: 'https://calendar.zoho.com/book/votre-page',
-   };
+   CALCOM_API_KEY: "cal_live_votre_cle_api",
+   CALCOM_USERNAME: "votre-username",
+   CALCOM_EVENT_SLUG: "consultation-30min"
    ```
+
+**Avantages Cal.com** :
+- ✅ 100% gratuit (pas de limite de réservations)
+- ✅ Synchronisation temps réel (aucun risque de double réservation)
+- ✅ Emails automatiques au client et au cabinet
+- ✅ Design de votre site conservé à 100%
 
 ## 📧 Configuration Email (EmailJS)
 
