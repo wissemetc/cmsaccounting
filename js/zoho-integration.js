@@ -27,7 +27,7 @@ async function getCalcomAvailability(dateFrom, dateTo) {
     try {
         console.log(`📅 Récupération disponibilités du ${dateFrom} au ${dateTo}...`);
 
-        const response = await fetch('/.netlify/functions/get-availability', {
+        const response = await fetch(API_CONFIG.GET_AVAILABILITY_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -63,7 +63,7 @@ async function createCalcomBooking(formData) {
     try {
         console.log('📅 Création de la réservation Cal.com...');
 
-        const response = await fetch('/.netlify/functions/create-booking', {
+        const response = await fetch(API_CONFIG.CREATE_BOOKING_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -1,0 +1,13 @@
+# AWS SAM Build artifacts
+.aws-sam/
+samconfig.toml
+
+# Node modules
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Build files
+*.zip

@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Cal.com Integration - Lambda Functions avec API Gateway
+
+Parameters:
+  CalcomApiKey:
+    Type: String
+    Description: Clé API Cal.com
+    NoEcho: true
+  CalcomEventTypeId:
+    Type: String
+    Description: ID du type d'événement Cal.com
+  CalcomEventSlug:
+    Type: String
+    Description: Slug de l'événement Cal.com
+    Default: consultation-30min
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs20.x
+    MemorySize: 256
+    Environment:
+      Variables:
+        CALCOM_API_KEY: !Ref CalcomApiKey
+        CALCOM_EVENT_TYPE_ID: !Ref CalcomEventTypeId
+        CALCOM_EVENT_SLUG: !Ref CalcomEventSlug
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,OPTIONS'"
+      AllowHeaders: "'Content-Type'"
+      AllowOrigin: "'*'"
+
+Resources:
+  # Lambda Function : Get Availability
+  GetAvailabilityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: calcom-get-availability
+      CodeUri: get-availability/
+      Handler: index.handler
+      Description: Récupère les disponibilités Cal.com
+      Events:
+        GetAvailabilityApi:
+          Type: Api
+          Properties:
+            Path: /get-availability
+            Method: POST
+            RestApiId: !Ref CalcomApi
+
+  # Lambda Function : Create Booking
+  CreateBookingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: calcom-create-booking
+      CodeUri: create-booking/
+      Handler: index.handler
+      Description: Crée une réservation Cal.com
+      Events:
+        CreateBookingApi:
+          Type: Api
+          Properties:
+            Path: /create-booking
+            Method: POST
+            RestApiId: !Ref CalcomApi
+
+  # API Gateway
+  CalcomApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: CalcomIntegrationAPI
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,OPTIONS'"
+        AllowHeaders: "'Content-Type'"
+        AllowOrigin: "'*'"
+
+Outputs:
+  ApiEndpoint:
+    Description: "URL de base de l'API Gateway"
+    Value: !Sub "https://${CalcomApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: CalcomApiEndpoint
+
+  GetAvailabilityUrl:
+    Description: "URL pour récupérer les disponibilités"
+    Value: !Sub "https://${CalcomApi}.execute-api.${AWS::Region}.amazonaws.com/prod/get-availability"
+
+  CreateBookingUrl:
+    Description: "URL pour créer une réservation"
+    Value: !Sub "https://${CalcomApi}.execute-api.${AWS::Region}.amazonaws.com/prod/create-booking"
