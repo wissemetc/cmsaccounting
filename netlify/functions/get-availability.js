@@ -42,6 +42,7 @@ exports.handler = async (event, context) => {
     const calHeaders = {
       Authorization: `Bearer ${CALCOM_API_KEY}`,
       "Content-Type": "application/json",
+      "cal-api-version": "2024-06-14",
     };
 
     /* ===========================
@@ -54,15 +55,14 @@ exports.handler = async (event, context) => {
 
     if (!eventTypesRes.ok) {
       const text = await eventTypesRes.text();
-      throw new Error(
-        `Event types error ${eventTypesRes.status}: ${text}`
-      );
+      throw new Error(`Event types error ${eventTypesRes.status}: ${text}`);
     }
 
     const eventTypesJson = await eventTypesRes.json();
 
-    // v2 returns { eventTypes: [...] }
-    const eventTypes = eventTypesJson.eventTypes || [];
+    // v2 returns { status, data: [...] }
+    const eventTypes = eventTypesJson.data || [];
+
     const eventType = eventTypes.find(
       (et) => et.slug === CALCOM_EVENT_SLUG
     );
@@ -85,14 +85,10 @@ exports.handler = async (event, context) => {
     =========================== */
     const params = new URLSearchParams({
       eventTypeId: eventType.id.toString(),
-      startTime:
-        dateFrom ||
-        new Date().toISOString(),
+      startTime: dateFrom || new Date().toISOString(),
       endTime:
         dateTo ||
-        new Date(
-          Date.now() + 90 * 24 * 60 * 60 * 1000
-        ).toISOString(),
+        new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
       timeZone: "Africa/Tunis",
     });
 
@@ -122,7 +118,7 @@ exports.handler = async (event, context) => {
           id: eventType.id,
           slug: eventType.slug,
           title: eventType.title,
-          length: eventType.length,
+          length: eventType.lengthInMinutes,
         },
         availability: availabilityData,
       }),
