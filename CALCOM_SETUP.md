@@ -54,23 +54,34 @@ CALCOM_API_URL: "https://api.cal.com/v1"  // URL de l'API (ne pas modifier)
 
 ## ✅ Comment ça fonctionne
 
+### Affichage dynamique des disponibilités :
+
+Le calendrier affiche **uniquement les créneaux que vous avez réellement ouverts dans Cal.com** :
+
+1. **Chargement initial** : Le calendrier récupère vos disponibilités Cal.com pour les 3 prochains mois
+2. **Affichage intelligent** : Seuls les jours avec des créneaux disponibles sont cliquables
+3. **Créneaux en temps réel** : Les horaires affichés correspondent exactement à vos disponibilités Cal.com
+4. **Pas de créneaux statiques** : Plus besoin de configurer WORKING_HOURS ou ALWAYS_BUSY manuellement
+
 ### Flux de réservation :
 
-1. **Visiteur** : Voit votre calendrier avec le design actuel
-2. **Sélection** : Choisit une date et un créneau disponible
-3. **Formulaire** : Remplit ses informations (nom, email, téléphone, etc.)
-4. **Soumission** : Clique sur "Confirmer la demande de rendez-vous"
-5. **Cal.com** : Crée automatiquement la réservation
-6. **Synchronisation** : La réservation apparaît dans votre calendrier Zoho
-7. **Emails** : Confirmation envoyée au client ET à vous
-8. **Protection** : Le créneau devient indisponible pour les autres visiteurs
+1. **Visiteur** : Voit votre calendrier avec uniquement VOS créneaux disponibles
+2. **Jours disponibles** : Seuls les jours avec créneaux Cal.com sont en vert/cliquables
+3. **Sélection horaire** : Choisit parmi les horaires que VOUS avez ouverts dans Cal.com
+4. **Formulaire** : Remplit ses informations (nom, email, téléphone, etc.)
+5. **Soumission** : Clique sur "Confirmer la demande de rendez-vous"
+6. **Cal.com** : Crée automatiquement la réservation
+7. **Synchronisation** : La réservation apparaît dans votre calendrier Zoho
+8. **Emails** : Confirmation envoyée au client ET à vous
+9. **Mise à jour** : Le créneau devient indisponible pour les autres visiteurs
 
 ### Synchronisation temps réel :
 
-- ✅ Client A réserve 10h → Créneau immédiatement bloqué
-- ✅ Client B arrive 1 minute après → Ne peut PAS réserver 10h
-- ✅ Aucun risque de double réservation
-- ✅ Tous les visiteurs voient les mêmes créneaux disponibles
+- ✅ **Vous ouvrez un créneau dans Cal.com** → Visible sur votre site dans la minute
+- ✅ **Client A réserve 10h** → Créneau immédiatement bloqué sur Cal.com
+- ✅ **Client B arrive 1 minute après** → Ne peut PAS réserver 10h (déjà pris)
+- ✅ **Vous fermez un créneau dans Cal.com** → Disparaît automatiquement du site
+- ✅ Tous les visiteurs voient les **mêmes créneaux disponibles en temps réel**
 
 ---
 
@@ -126,39 +137,38 @@ cmsaccounting/
 
 ---
 
-## 📝 Personnalisation
+## 📝 Gestion des disponibilités
 
-### Modifier les horaires de travail :
+### Gérer vos horaires directement dans Cal.com :
 
-Dans `js/main.js`, ligne ~186 :
+**Tous vos horaires sont gérés dans Cal.com** - plus besoin de modifier le code !
 
-```javascript
-WORKING_HOURS: {
-    start: 8.5,   // 8h30
-    end: 15.5     // 15h30
-},
+1. **Connectez-vous sur** [cal.com](https://cal.com)
+2. **Allez dans "Availability"** (Disponibilités)
+3. **Configurez vos horaires** :
+   - Jours de travail (ex: Lundi-Vendredi)
+   - Heures de travail (ex: 8h30-17h30)
+   - Pauses déjeuner (ex: 12h30-13h30)
+   - Durée des consultations (ex: 30 min)
+4. **Sauvegardez** → Les changements apparaissent automatiquement sur votre site !
+
+### Exemple de configuration Cal.com :
+
+```
+Lundi    : 8h30 - 12h30, 13h30 - 17h30
+Mardi    : 8h30 - 12h30, 13h30 - 17h30
+Mercredi : 8h30 - 12h30, 13h30 - 17h30
+Jeudi    : 8h30 - 12h00 (demi-journée)
+Vendredi : 8h30 - 12h30, 13h30 - 17h30
+Samedi   : Fermé
+Dimanche : Fermé
 ```
 
-### Modifier les créneaux toujours occupés :
+### Bloquer des créneaux ponctuellement :
 
-Ligne ~189 :
+Dans Cal.com, allez dans **Calendar** → Cliquez sur un créneau → **"Block time"**
 
-```javascript
-ALWAYS_BUSY: {
-    1: [{ start: 12.5, end: 13.5 }],  // Lundi 12h30-13h30
-    4: [{ start: 12.5, end: 13.5 }]   // Jeudi 12h30-13h30
-},
-```
-
-**Format** : `0 = Dimanche, 1 = Lundi, ..., 6 = Samedi`
-
-### Modifier la durée des rendez-vous :
-
-Ligne ~184 :
-
-```javascript
-APPOINTMENT_DURATION: 30,  // 30 minutes
-```
+Aucun visiteur ne pourra réserver ce créneau sur votre site.
 
 ---
 

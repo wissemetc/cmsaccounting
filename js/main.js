@@ -215,7 +215,9 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             reservedSlots: loadReservedSlots(),
             mobileMenuOpen: false,
             lastScrollY: 0,
-            isDesktop: window.innerWidth >= 993
+            isDesktop: window.innerWidth >= 993,
+            calcomAvailability: null, // Cache des disponibilités Cal.com
+            loadingAvailability: false
         };
 
         // ===== FONCTIONS UTILITAIRES AMÉLIORÉES =====
@@ -261,6 +263,68 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         function isValidEmail(email) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             return emailRegex.test(email);
+        }
+
+        // ===== RÉCUPÉRATION DES DISPONIBILITÉS CAL.COM =====
+        async function loadCalcomAvailability() {
+            if (state.loadingAvailability) {
+                console.log('⏳ Chargement déjà en cours...');
+                return state.calcomAvailability;
+            }
+
+            try {
+                state.loadingAvailability = true;
+
+                // Calculer la plage de dates (mois actuel + 2 mois suivants)
+                const startDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth(), 1);
+                const endDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 3, 0);
+
+                const dateFrom = startDate.toISOString().split('T')[0];
+                const dateTo = endDate.toISOString().split('T')[0];
+
+                console.log(`📅 Récupération disponibilités Cal.com du ${dateFrom} au ${dateTo}...`);
+
+                const availability = await window.getCalcomAvailability(dateFrom, dateTo);
+
+                if (availability) {
+                    state.calcomAvailability = availability;
+                    console.log('✅ Disponibilités Cal.com chargées:', availability);
+                    return availability;
+                } else {
+                    console.warn('⚠️ Impossible de récupérer les disponibilités Cal.com');
+                    return null;
+                }
+            } catch (error) {
+                console.error('❌ Erreur chargement disponibilités Cal.com:', error);
+                return null;
+            } finally {
+                state.loadingAvailability = false;
+            }
+        }
+
+        function getAvailableSlotsForDate(dateString) {
+            if (!state.calcomAvailability || !state.calcomAvailability.slots) {
+                return [];
+            }
+
+            // Filtrer les créneaux pour la date donnée
+            const dateSlots = state.calcomAvailability.slots.filter(slot => {
+                const slotDate = new Date(slot.time).toISOString().split('T')[0];
+                return slotDate === dateString;
+            });
+
+            // Extraire uniquement les heures au format HH:MM
+            return dateSlots.map(slot => {
+                const slotTime = new Date(slot.time);
+                const hours = slotTime.getHours().toString().padStart(2, '0');
+                const minutes = slotTime.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            });
+        }
+
+        function hasAvailableSlotsForDate(dateString) {
+            const slots = getAvailableSlotsForDate(dateString);
+            return slots.length > 0;
         }
 
         // ===== GESTION DES CRÉNEAUX RÉSERVÉS =====
@@ -814,19 +878,19 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         // ===== GESTION DU CALENDRIER AMÉLIORÉE =====
-        function renderCalendar() {
+        async function renderCalendar() {
             const calendar = document.getElementById('calendar');
             const calendarHeaders = document.getElementById('calendarHeaders');
             const monthYear = document.getElementById('currentMonth');
-            
-            const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
+
+            const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                            'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
             const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-            
+
             const currentMonth = state.currentDate.getMonth();
             const currentYear = state.currentDate.getFullYear();
             monthYear.textContent = `${months[currentMonth]} ${currentYear}`;
-            
+
             calendarHeaders.innerHTML = '';
             days.forEach(day => {
                 const dayElement = document.createElement('div');
@@ -834,58 +898,56 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 dayElement.textContent = day;
                 calendarHeaders.appendChild(dayElement);
             });
-            
+
             const firstDay = new Date(currentYear, currentMonth, 1).getDay();
             const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
             const today = getCurrentTimeInTunis();
             const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            
+
+            // Charger les disponibilités Cal.com
+            await loadCalcomAvailability();
+
             calendar.innerHTML = '';
-            
+
             for (let i = 0; i < firstDay; i++) {
                 const emptyDay = document.createElement('div');
                 emptyDay.className = 'calendar-day unavailable';
                 emptyDay.textContent = '';
                 calendar.appendChild(emptyDay);
             }
-            
+
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayElement = document.createElement('div');
                 const fullDate = new Date(currentYear, currentMonth, day);
                 const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayOfWeek = fullDate.getDay();
-                
+
                 dayElement.className = 'calendar-day';
                 dayElement.textContent = day;
                 dayElement.dataset.fullDate = dateString;
                 dayElement.dataset.dayOfWeek = dayOfWeek;
-                
+
                 const elementDateOnly = new Date(currentYear, currentMonth, day);
-                
+
                 if (elementDateOnly.getTime() === todayDateOnly.getTime()) {
                     dayElement.classList.add('today');
                 }
-                
+
                 const isPastDate = elementDateOnly < todayDateOnly;
-                const isWeekendDay = isWeekend(dayOfWeek);
-                
+
                 if (isPastDate) {
                     dayElement.className = 'calendar-day past';
                     dayElement.title = 'Date passée';
                     dayElement.style.cursor = 'not-allowed';
-                } 
-                else if (isWeekendDay) {
-                    dayElement.className = 'calendar-day weekend';
-                    dayElement.title = 'Pas de rendez-vous le week-end';
-                    dayElement.style.cursor = 'not-allowed';
                 }
-                else if (isWorkingDay(dayOfWeek)) {
-                    const hasAvailableSlots = checkAvailableSlotsForDate(dateString, dayOfWeek);
-                    
-                    if (hasAvailableSlots) {
+                else {
+                    // Vérifier si la date a des créneaux disponibles dans Cal.com
+                    const hasSlots = hasAvailableSlotsForDate(dateString);
+
+                    if (hasSlots) {
                         dayElement.className = 'calendar-day available';
                         dayElement.title = 'Cliquez pour voir les horaires disponibles';
-                        
+
                         dayElement.addEventListener('click', function() {
                             selectDate(this);
                         });
@@ -894,13 +956,8 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                         dayElement.title = 'Aucun créneau disponible';
                         dayElement.style.cursor = 'not-allowed';
                     }
-                } 
-                else {
-                    dayElement.className = 'calendar-day unavailable';
-                    dayElement.title = 'Indisponible';
-                    dayElement.style.cursor = 'not-allowed';
                 }
-                
+
                 calendar.appendChild(dayElement);
             }
         }
@@ -973,75 +1030,17 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             const timeSelection = document.getElementById('timeSelection');
             const timeSlots = document.getElementById('timeSlots');
             const selectedSlot = document.getElementById('selectedSlot');
-            
+
             timeSelection.style.display = 'block';
             selectedSlot.style.display = 'none';
-            
+
             timeSlots.innerHTML = '';
             state.selectedTime = null;
-            
-            const now = getCurrentTimeInTunis();
-            const isToday = new Date(date).toDateString() === now.toDateString();
-            const reservedSlots = getReservedSlotsForDate(date);
-            
-            let hasAvailableSlots = false;
-            
-            for (let hour = Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start); hour <= Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.end); hour++) {
-                for (let minute = (hour === Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start) ? 30 : 0); 
-                     minute < 60; 
-                     minute += APPOINTMENT_CONFIG.APPOINTMENT_DURATION) {
-                    
-                    const timeDecimal = hour + (minute / 60);
-                    if (timeDecimal > APPOINTMENT_CONFIG.WORKING_HOURS.end) break;
-                    
-                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                    const timeSlot = document.createElement('div');
-                    timeSlot.className = 'time-slot';
-                    timeSlot.textContent = timeString;
-                    timeSlot.dataset.time = timeString;
-                    timeSlot.dataset.timeDecimal = timeDecimal;
-                    
-                    let isAlwaysBusy = false;
-                    
-                    if (APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek]) {
-                        APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek].forEach(busySlot => {
-                            if (timeDecimal >= busySlot.start && timeDecimal < busySlot.end) {
-                                isAlwaysBusy = true;
-                            }
-                        });
-                    }
-                    
-                    const isBooked = isSlotReserved(date, timeString);
-                    const isPast = isToday && isTimeInPast(date, timeString);
-                    
-                    if (isAlwaysBusy) {
-                        timeSlot.classList.add('disabled');
-                        timeSlot.style.display = 'none';
-                    } 
-                    else if (isBooked) {
-                        timeSlot.classList.add('booked');
-                        timeSlot.title = 'Déjà réservé';
-                        timeSlot.style.cursor = 'not-allowed';
-                    }
-                    else if (isPast) {
-                        timeSlot.classList.add('past');
-                        timeSlot.title = 'Créneau passé';
-                        timeSlot.style.cursor = 'not-allowed';
-                        timeSlot.style.opacity = '0.5';
-                    }
-                    else {
-                        hasAvailableSlots = true;
-                        timeSlot.addEventListener('click', function() {
-                            selectTime(this);
-                        });
-                        timeSlot.title = 'Disponible - Cliquez pour sélectionner';
-                    }
-                    
-                    timeSlots.appendChild(timeSlot);
-                }
-            }
-            
-            if (!hasAvailableSlots) {
+
+            // Récupérer les créneaux disponibles depuis Cal.com
+            const availableSlots = getAvailableSlotsForDate(date);
+
+            if (!availableSlots || availableSlots.length === 0) {
                 const noSlotsMessage = document.createElement('div');
                 noSlotsMessage.style.gridColumn = '1 / -1';
                 noSlotsMessage.style.textAlign = 'center';
@@ -1049,6 +1048,54 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 noSlotsMessage.style.color = 'var(--gray-500)';
                 noSlotsMessage.style.fontStyle = 'italic';
                 noSlotsMessage.textContent = 'Aucun créneau disponible pour cette date';
+                timeSlots.appendChild(noSlotsMessage);
+                return;
+            }
+
+            const now = getCurrentTimeInTunis();
+            const isToday = new Date(date).toDateString() === now.toDateString();
+            let hasAvailableSlots = false;
+
+            // Afficher uniquement les créneaux disponibles dans Cal.com
+            availableSlots.forEach(timeString => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot';
+                timeSlot.textContent = timeString;
+                timeSlot.dataset.time = timeString;
+
+                const isBooked = isSlotReserved(date, timeString);
+                const isPast = isToday && isTimeInPast(date, timeString);
+
+                if (isBooked) {
+                    timeSlot.classList.add('booked');
+                    timeSlot.title = 'Déjà réservé';
+                    timeSlot.style.cursor = 'not-allowed';
+                }
+                else if (isPast) {
+                    timeSlot.classList.add('past');
+                    timeSlot.title = 'Créneau passé';
+                    timeSlot.style.cursor = 'not-allowed';
+                    timeSlot.style.opacity = '0.5';
+                }
+                else {
+                    hasAvailableSlots = true;
+                    timeSlot.addEventListener('click', function() {
+                        selectTime(this);
+                    });
+                    timeSlot.title = 'Disponible - Cliquez pour sélectionner';
+                }
+
+                timeSlots.appendChild(timeSlot);
+            });
+
+            if (!hasAvailableSlots) {
+                const noSlotsMessage = document.createElement('div');
+                noSlotsMessage.style.gridColumn = '1 / -1';
+                noSlotsMessage.style.textAlign = 'center';
+                noSlotsMessage.style.padding = '20px';
+                noSlotsMessage.style.color = 'var(--gray-500)';
+                noSlotsMessage.style.fontStyle = 'italic';
+                noSlotsMessage.textContent = 'Tous les créneaux sont déjà réservés ou passés';
                 timeSlots.appendChild(noSlotsMessage);
             }
         }
@@ -1089,6 +1136,8 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
 
         function changeMonth(direction) {
             state.currentDate.setMonth(state.currentDate.getMonth() + direction);
+            // Réinitialiser le cache des disponibilités pour charger le nouveau mois
+            state.calcomAvailability = null;
             renderCalendar();
             resetCalendarSelection();
         }
