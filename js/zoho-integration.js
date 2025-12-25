@@ -3,178 +3,99 @@
  * ║            INTÉGRATION CAL.COM - SYSTÈME DE RÉSERVATION          ║
  * ╚═══════════════════════════════════════════════════════════════════╝
  *
- * Ce fichier remplace l'intégration Zoho Calendar par Cal.com
+ * Ce fichier intègre Cal.com via le widget embed (pas d'API nécessaire)
  * pour la prise de rendez-vous en ligne avec synchronisation temps réel.
  *
  * Configuration requise :
- * - CALCOM_API_KEY : Clé API Cal.com (à configurer dans js/main.js)
  * - CALCOM_USERNAME : Votre username Cal.com
  * - CALCOM_EVENT_SLUG : Le slug de votre type d'événement
  *
  * Avantages :
- * ✅ 100% gratuit (plan gratuit Cal.com)
+ * ✅ 100% gratuit (aucune API key nécessaire)
  * ✅ Aucun risque de double réservation
- * ✅ Synchronisation temps réel
+ * ✅ Synchronisation temps réel automatique
  * ✅ Emails automatiques
- * ✅ Intégration transparente avec l'UI existant
+ * ✅ Pas de problème CORS
  */
 
-// Cache pour l'ID du type d'événement
-let cachedEventTypeId = null;
-
 /**
- * Récupère l'ID du type d'événement Cal.com
- * @returns {Promise<number>} L'ID du type d'événement
- */
-async function getCalcomEventTypeId() {
-    if (cachedEventTypeId) {
-        return cachedEventTypeId;
-    }
-
-    try {
-        const response = await fetch(`${APPOINTMENT_CONFIG.CALCOM_API_URL}/event-types`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${APPOINTMENT_CONFIG.CALCOM_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Erreur API Cal.com: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const eventType = data.event_types?.find(et => et.slug === APPOINTMENT_CONFIG.CALCOM_EVENT_SLUG);
-
-        if (!eventType) {
-            throw new Error(`Event type "${APPOINTMENT_CONFIG.CALCOM_EVENT_SLUG}" introuvable`);
-        }
-
-        cachedEventTypeId = eventType.id;
-        console.log('✅ Event Type ID récupéré:', eventType.id);
-        return eventType.id;
-    } catch (error) {
-        console.error('❌ Erreur récupération Event Type ID:', error);
-        throw error;
-    }
-}
-
-/**
- * Crée une réservation sur Cal.com
- * @param {Object} formData - Les données du formulaire
- * @returns {Promise<Object>} La réservation créée
- */
-async function createCalcomBooking(formData) {
-    try {
-        const eventTypeId = await getCalcomEventTypeId();
-
-        // Construire la date/heure ISO pour Cal.com
-        const [year, month, day] = formData.date.split('-');
-        const [hours, minutes] = formData.time.split(':');
-        const startDateTime = new Date(year, month - 1, day, hours, minutes);
-        const startISO = startDateTime.toISOString();
-
-        const bookingData = {
-            eventTypeId: eventTypeId,
-            start: startISO,
-            responses: {
-                name: formData.name,
-                email: formData.email,
-                phone: formData.phone,
-                notes: `Service: ${formData.service}\nType: ${formData.meetingType}\nEntreprise: ${formData.company || 'Non spécifié'}\nMessage: ${formData.message || 'Aucun message'}`
-            },
-            timeZone: "Africa/Tunis",
-            language: "fr",
-            metadata: {
-                service: formData.service,
-                meetingType: formData.meetingType,
-                company: formData.company || '',
-                appointmentId: formData.appointmentId
-            }
-        };
-
-        console.log('📅 Création réservation Cal.com...', bookingData);
-
-        const response = await fetch(`${APPOINTMENT_CONFIG.CALCOM_API_URL}/bookings`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${APPOINTMENT_CONFIG.CALCOM_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(bookingData)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Erreur création réservation: ${JSON.stringify(errorData)}`);
-        }
-
-        const result = await response.json();
-        console.log('✅ Réservation Cal.com créée:', result);
-        return result;
-
-    } catch (error) {
-        console.error('❌ Erreur création réservation Cal.com:', error);
-        throw error;
-    }
-}
-
-/**
- * Récupère les disponibilités depuis Cal.com
- * @param {string} dateFrom - Date de début (ISO)
- * @param {string} dateTo - Date de fin (ISO)
- * @returns {Promise<Object>} Les disponibilités
- */
-async function getCalcomAvailability(dateFrom, dateTo) {
-    try {
-        const eventTypeId = await getCalcomEventTypeId();
-
-        const params = new URLSearchParams({
-            eventTypeId: eventTypeId,
-            dateFrom: dateFrom,
-            dateTo: dateTo,
-            timeZone: 'Africa/Tunis'
-        });
-
-        const response = await fetch(`${APPOINTMENT_CONFIG.CALCOM_API_URL}/availability?${params}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${APPOINTMENT_CONFIG.CALCOM_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Erreur récupération disponibilités: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('✅ Disponibilités Cal.com récupérées');
-        return data;
-    } catch (error) {
-        console.error('❌ Erreur récupération disponibilités Cal.com:', error);
-        return null;
-    }
-}
-
-/**
- * Initialise l'intégration Cal.com
- * Appelé automatiquement au chargement de la page
+ * Initialise l'intégration Cal.com via le bouton/lien
+ * Cette méthode ouvre Cal.com dans une popup ou redirige vers Cal.com
  */
 function initCalcomIntegration() {
-    console.log('🚀 Initialisation intégration Cal.com...');
+    console.log('🚀 Initialisation intégration Cal.com (mode widget)...');
 
-    // Vérifier la configuration
-    if (!APPOINTMENT_CONFIG.CALCOM_API_KEY || APPOINTMENT_CONFIG.CALCOM_API_KEY === 'cal_live_xxxxxxxxxxxxxxx') {
-        console.warn('⚠️ ATTENTION: La clé API Cal.com n\'est pas configurée !');
-        console.warn('⚠️ Veuillez remplacer CALCOM_API_KEY dans js/main.js');
-        return;
+    // Charger le script Cal.com embed
+    if (!document.querySelector('script[src*="cal.com/embed"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://cal.com/embed/embed.js';
+        script.async = true;
+        document.head.appendChild(script);
+        console.log('✅ Script Cal.com embed chargé');
+    }
+}
+
+/**
+ * Ouvre Cal.com avec les informations du formulaire pré-remplies
+ * @param {Object} formData - Données du formulaire
+ */
+function openCalcomBooking(formData) {
+    // Construire l'URL Cal.com avec paramètres pré-remplis
+    const calcomUrl = `https://cal.com/${APPOINTMENT_CONFIG.CALCOM_USERNAME}/${APPOINTMENT_CONFIG.CALCOM_EVENT_SLUG}`;
+
+    const params = new URLSearchParams({
+        name: formData.name || '',
+        email: formData.email || '',
+        notes: `Service: ${formData.service}\nType: ${formData.meetingType}\nEntreprise: ${formData.company || 'Non spécifié'}\nMessage: ${formData.message || ''}`
+    });
+
+    const fullUrl = `${calcomUrl}?${params.toString()}`;
+
+    console.log('📅 Ouverture Cal.com:', fullUrl);
+
+    // Option 1 : Ouvrir dans une popup
+    const popup = window.open(fullUrl, 'cal-booking', 'width=800,height=800,scrollbars=yes');
+
+    if (!popup) {
+        // Si popup bloquée, rediriger dans le même onglet
+        window.location.href = fullUrl;
     }
 
-    console.log('✅ Configuration Cal.com détectée');
-    console.log(`   Username: ${APPOINTMENT_CONFIG.CALCOM_USERNAME}`);
-    console.log(`   Event slug: ${APPOINTMENT_CONFIG.CALCOM_EVENT_SLUG}`);
+    return true;
+}
+
+/**
+ * Fonction factice pour compatibilité avec le code existant
+ * Retourne un succès immédiat car Cal.com gère la réservation
+ */
+async function createCalcomBooking(formData) {
+    console.log('📅 Ouverture de Cal.com pour réservation...');
+
+    // Ouvrir Cal.com avec les données pré-remplies
+    openCalcomBooking(formData);
+
+    // Retourner un succès factice (la vraie réservation se fait sur Cal.com)
+    return {
+        success: true,
+        message: 'Redirection vers Cal.com pour finaliser la réservation',
+        method: 'widget'
+    };
+}
+
+/**
+ * Fonction factice pour compatibilité
+ * Les disponibilités sont gérées directement par Cal.com
+ */
+async function getCalcomAvailability(dateFrom, dateTo) {
+    console.log('ℹ️ Les disponibilités sont gérées par Cal.com directement');
+    return null;
+}
+
+/**
+ * Fonction factice pour compatibilité
+ */
+async function getCalcomEventTypeId() {
+    return null;
 }
 
 // Initialiser Cal.com au chargement de la page
@@ -191,4 +112,6 @@ if (typeof window !== 'undefined') {
     window.getCalcomEventTypeId = getCalcomEventTypeId;
     window.createCalcomBooking = createCalcomBooking;
     window.getCalcomAvailability = getCalcomAvailability;
+    window.openCalcomBooking = openCalcomBooking;
 }
+

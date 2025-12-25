@@ -878,7 +878,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         // ===== GESTION DU CALENDRIER AMÉLIORÉE =====
-        async function renderCalendar() {
+        function renderCalendar() {
             const calendar = document.getElementById('calendar');
             const calendarHeaders = document.getElementById('calendarHeaders');
             const monthYear = document.getElementById('currentMonth');
@@ -904,8 +904,8 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             const today = getCurrentTimeInTunis();
             const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-            // Charger les disponibilités Cal.com
-            await loadCalcomAvailability();
+            // Note: Disponibilités gérées statiquement (pas d'appel API Cal.com)
+            // await loadCalcomAvailability(); // Désactivé - cause erreur CORS
 
             calendar.innerHTML = '';
 
@@ -940,9 +940,9 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                     dayElement.title = 'Date passée';
                     dayElement.style.cursor = 'not-allowed';
                 }
-                else {
-                    // Vérifier si la date a des créneaux disponibles dans Cal.com
-                    const hasSlots = hasAvailableSlotsForDate(dateString);
+                else if (isWorkingDay(dayOfWeek)) {
+                    // Vérifier si la date a des créneaux disponibles (statique)
+                    const hasSlots = checkAvailableSlotsForDate(dateString, dayOfWeek);
 
                     if (hasSlots) {
                         dayElement.className = 'calendar-day available';
@@ -956,6 +956,11 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                         dayElement.title = 'Aucun créneau disponible';
                         dayElement.style.cursor = 'not-allowed';
                     }
+                }
+                else {
+                    dayElement.className = 'calendar-day unavailable';
+                    dayElement.title = 'Indisponible';
+                    dayElement.style.cursor = 'not-allowed';
                 }
 
                 calendar.appendChild(dayElement);
@@ -1037,56 +1042,64 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             timeSlots.innerHTML = '';
             state.selectedTime = null;
 
-            // Récupérer les créneaux disponibles depuis Cal.com
-            const availableSlots = getAvailableSlotsForDate(date);
-
-            if (!availableSlots || availableSlots.length === 0) {
-                const noSlotsMessage = document.createElement('div');
-                noSlotsMessage.style.gridColumn = '1 / -1';
-                noSlotsMessage.style.textAlign = 'center';
-                noSlotsMessage.style.padding = '20px';
-                noSlotsMessage.style.color = 'var(--gray-500)';
-                noSlotsMessage.style.fontStyle = 'italic';
-                noSlotsMessage.textContent = 'Aucun créneau disponible pour cette date';
-                timeSlots.appendChild(noSlotsMessage);
-                return;
-            }
-
             const now = getCurrentTimeInTunis();
             const isToday = new Date(date).toDateString() === now.toDateString();
             let hasAvailableSlots = false;
 
-            // Afficher uniquement les créneaux disponibles dans Cal.com
-            availableSlots.forEach(timeString => {
-                const timeSlot = document.createElement('div');
-                timeSlot.className = 'time-slot';
-                timeSlot.textContent = timeString;
-                timeSlot.dataset.time = timeString;
+            // Générer les créneaux statiquement
+            for (let hour = Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start); hour <= Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.end); hour++) {
+                for (let minute = (hour === Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start) ? 30 : 0);
+                     minute < 60;
+                     minute += APPOINTMENT_CONFIG.APPOINTMENT_DURATION) {
 
-                const isBooked = isSlotReserved(date, timeString);
-                const isPast = isToday && isTimeInPast(date, timeString);
+                    const timeDecimal = hour + (minute / 60);
+                    if (timeDecimal > APPOINTMENT_CONFIG.WORKING_HOURS.end) break;
 
-                if (isBooked) {
-                    timeSlot.classList.add('booked');
-                    timeSlot.title = 'Déjà réservé';
-                    timeSlot.style.cursor = 'not-allowed';
-                }
-                else if (isPast) {
-                    timeSlot.classList.add('past');
-                    timeSlot.title = 'Créneau passé';
-                    timeSlot.style.cursor = 'not-allowed';
-                    timeSlot.style.opacity = '0.5';
-                }
-                else {
-                    hasAvailableSlots = true;
-                    timeSlot.addEventListener('click', function() {
-                        selectTime(this);
-                    });
-                    timeSlot.title = 'Disponible - Cliquez pour sélectionner';
-                }
+                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    const timeSlot = document.createElement('div');
+                    timeSlot.className = 'time-slot';
+                    timeSlot.textContent = timeString;
+                    timeSlot.dataset.time = timeString;
 
-                timeSlots.appendChild(timeSlot);
-            });
+                    let isAlwaysBusy = false;
+
+                    if (APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek]) {
+                        APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek].forEach(busySlot => {
+                            if (timeDecimal >= busySlot.start && timeDecimal < busySlot.end) {
+                                isAlwaysBusy = true;
+                            }
+                        });
+                    }
+
+                    const isBooked = isSlotReserved(date, timeString);
+                    const isPast = isToday && isTimeInPast(date, timeString);
+
+                    if (isAlwaysBusy) {
+                        timeSlot.classList.add('disabled');
+                        timeSlot.style.display = 'none';
+                    }
+                    else if (isBooked) {
+                        timeSlot.classList.add('booked');
+                        timeSlot.title = 'Déjà réservé';
+                        timeSlot.style.cursor = 'not-allowed';
+                    }
+                    else if (isPast) {
+                        timeSlot.classList.add('past');
+                        timeSlot.title = 'Créneau passé';
+                        timeSlot.style.cursor = 'not-allowed';
+                        timeSlot.style.opacity = '0.5';
+                    }
+                    else {
+                        hasAvailableSlots = true;
+                        timeSlot.addEventListener('click', function() {
+                            selectTime(this);
+                        });
+                        timeSlot.title = 'Disponible - Cliquez pour sélectionner';
+                    }
+
+                    timeSlots.appendChild(timeSlot);
+                }
+            }
 
             if (!hasAvailableSlots) {
                 const noSlotsMessage = document.createElement('div');
@@ -1095,7 +1108,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 noSlotsMessage.style.padding = '20px';
                 noSlotsMessage.style.color = 'var(--gray-500)';
                 noSlotsMessage.style.fontStyle = 'italic';
-                noSlotsMessage.textContent = 'Tous les créneaux sont déjà réservés ou passés';
+                noSlotsMessage.textContent = 'Aucun créneau disponible pour cette date';
                 timeSlots.appendChild(noSlotsMessage);
             }
         }
@@ -1262,33 +1275,17 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         async function processAppointment(formData) {
-            // 1. Créer la réservation sur Cal.com (source de vérité principale)
-            let calcomBooking = null;
-            try {
-                console.log('📅 Création de la réservation sur Cal.com...');
-                calcomBooking = await window.createCalcomBooking(formData);
-                console.log('✅ Réservation Cal.com créée avec succès:', calcomBooking);
-            } catch (calcomError) {
-                console.error('❌ Erreur lors de la création sur Cal.com:', calcomError);
-                throw new Error('Impossible de créer la réservation. Le créneau n\'est peut-être plus disponible. Veuillez réessayer.');
-            }
-
-            // 2. Sauvegarder localement comme backup (synchronisé avec Cal.com)
+            // 1. Sauvegarder localement
             const slotKey = saveReservedSlot(formData.date, formData.time, {
                 clientName: formData.name,
                 clientEmail: formData.email,
-                timestamp: new Date().toISOString(),
-                calcomBookingId: calcomBooking?.id || null
+                timestamp: new Date().toISOString()
             });
 
-            state.appointments[slotKey] = {
-                ...formData,
-                calcomBookingId: calcomBooking?.id || null,
-                calcomBookingUid: calcomBooking?.uid || null
-            };
+            state.appointments[slotKey] = formData;
             localStorage.setItem('cms_appointments', JSON.stringify(state.appointments));
 
-            // 3. Mettre à jour l'interface
+            // 2. Mettre à jour l'interface
             const timeSlot = document.querySelector(`.time-slot[data-time="${formData.time}"]`);
             if (timeSlot && !timeSlot.classList.contains('disabled')) {
                 timeSlot.classList.remove('selected');
@@ -1297,17 +1294,27 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 timeSlot.style.cursor = 'not-allowed';
             }
 
-            // 4. Envoyer les emails de confirmation (optionnel car Cal.com envoie déjà)
+            // 3. Envoyer les emails de confirmation
             try {
                 await sendEmails(formData);
                 console.log('✅ Emails de confirmation envoyés');
             } catch (emailError) {
-                console.warn('⚠️ Emails non envoyés (Cal.com a déjà envoyé une confirmation):', emailError);
+                console.warn('⚠️ Erreur lors de l\'envoi des emails:', emailError);
+            }
+
+            // 4. Ouvrir Cal.com pour finaliser la réservation (optionnel)
+            try {
+                console.log('📅 Ouverture de Cal.com pour finaliser la réservation...');
+                if (window.openCalcomBooking) {
+                    window.openCalcomBooking(formData);
+                }
+            } catch (calcomError) {
+                console.warn('⚠️ Cal.com non disponible:', calcomError);
             }
 
             updateCalendarAvailability();
 
-            return Promise.resolve(calcomBooking);
+            return Promise.resolve();
         }
 
         function updateCalendarAvailability() {
