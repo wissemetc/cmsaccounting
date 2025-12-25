@@ -1,229 +1,286 @@
 /**
- * ===== INTÉGRATION ZOHO CALENDAR =====
- * Ce fichier gère l'intégration avec Zoho Calendar/Bookings
+ * ===== INTÉGRATION ZOHO BOOKINGS RÉELLE =====
+ * Ce fichier gère l'intégration complète avec Zoho Bookings
  * pour la prise de rendez-vous en ligne
  */
 
-// Configuration Zoho Calendar
-const ZOHO_CONFIG = {
-    // À configurer avec vos informations Zoho
-    organizationId: 'VOTRE_ORG_ID', // Remplacez par votre Organization ID
-    serviceId: 'VOTRE_SERVICE_ID',   // Remplacez par votre Service ID
-    apiEndpoint: 'https://calendar.zoho.com/api/v1',
-    bookingsUrl: 'https://calendar.zoho.com/book/YOUR_BOOKING_PAGE', // URL de votre page de réservation Zoho
-};
-
 /**
- * Initialise l'intégration Zoho Calendar
+ * Initialise l'intégration Zoho Calendar au chargement de la page
  */
-function initZohoIntegration() {
-    console.log('Initialisation de l\'intégration Zoho Calendar...');
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Initialisation Zoho Bookings...');
 
-    // Option 1: Intégrer avec iframe (recommandé pour simplicité)
-    setupZohoIframe();
+    // Vérifier si la configuration existe
+    if (typeof ZOHO_CONFIG === 'undefined') {
+        console.error('❌ Configuration Zoho manquante. Veuillez charger js/config.js');
+        showConfigurationError();
+        return;
+    }
 
-    // Option 2: Intégrer avec l'API (pour une personnalisation complète)
-    // setupZohoAPI();
+    // Vérifier si l'URL Zoho est configurée
+    if (!ZOHO_CONFIG.bookingsUrl || ZOHO_CONFIG.bookingsUrl.includes('YOUR_BOOKING_PAGE')) {
+        console.warn('⚠️ URL Zoho Bookings non configurée');
+        showConfigurationWarning();
+        return;
+    }
 
-    // Ajouter un bouton pour ouvrir Zoho Bookings
+    // Initialiser l'intégration
+    if (ZOHO_CONFIG.enableIframe) {
+        console.log('📅 Intégration iframe Zoho Bookings activée');
+        setupZohoIframe();
+    }
+
+    // Ajouter le bouton de réservation
     addZohoBookingButton();
-}
+
+    console.log('✅ Zoho Bookings initialisé avec succès');
+});
 
 /**
- * Configure l'iframe Zoho Bookings
+ * Intègre l'iframe Zoho Bookings directement dans le calendrier
  */
 function setupZohoIframe() {
-    const appointmentSection = document.querySelector('#rendezvous');
-    if (!appointmentSection) return;
+    const calendarWidget = document.querySelector('.calendar-widget');
+    if (!calendarWidget) {
+        console.warn('⚠️ Widget calendrier non trouvé');
+        return;
+    }
 
-    // Créer un conteneur pour l'iframe Zoho
+    // Construire l'URL avec les paramètres de couleur
+    const iframeUrl = buildZohoUrl();
+
+    // Créer le conteneur de l'iframe
     const iframeContainer = document.createElement('div');
-    iframeContainer.className = 'zoho-calendar-container';
+    iframeContainer.className = 'zoho-iframe-container';
     iframeContainer.style.cssText = `
-        margin-top: 30px;
-        padding: 20px;
-        background: white;
+        width: 100%;
+        margin-top: 20px;
         border-radius: 12px;
+        overflow: hidden;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     `;
 
     // Créer l'iframe
     const iframe = document.createElement('iframe');
-    iframe.src = ZOHO_CONFIG.bookingsUrl;
+    iframe.src = iframeUrl;
     iframe.style.cssText = `
         width: 100%;
-        height: 600px;
+        height: 700px;
         border: none;
-        border-radius: 8px;
     `;
     iframe.setAttribute('frameborder', '0');
     iframe.setAttribute('allowfullscreen', 'true');
+    iframe.setAttribute('title', 'Réservation Zoho Bookings');
+
+    // Ajouter un écouteur pour les événements de l'iframe
+    iframe.addEventListener('load', function() {
+        console.log('✅ Iframe Zoho chargé');
+    });
+
+    iframe.addEventListener('error', function() {
+        console.error('❌ Erreur de chargement iframe Zoho');
+        showIframeError(iframeContainer);
+    });
 
     iframeContainer.appendChild(iframe);
 
-    // Insérer l'iframe après le formulaire existant
-    const formContainer = appointmentSection.querySelector('.form-container');
-    if (formContainer && formContainer.parentNode) {
-        formContainer.parentNode.insertBefore(iframeContainer, formContainer.nextSibling);
+    // Masquer le calendrier natif et afficher l'iframe
+    const calendarHeader = calendarWidget.querySelector('.calendar-header');
+    const calendarGrid = calendarWidget.querySelector('.calendar-grid');
+    const timeSelection = document.getElementById('timeSelection');
+
+    if (calendarGrid) calendarGrid.style.display = 'none';
+    if (timeSelection) timeSelection.style.display = 'none';
+
+    // Insérer l'iframe après le header
+    if (calendarHeader) {
+        calendarHeader.insertAdjacentElement('afterend', iframeContainer);
+    } else {
+        calendarWidget.insertBefore(iframeContainer, calendarWidget.firstChild);
     }
+}
+
+/**
+ * Construit l'URL Zoho avec les paramètres de couleur
+ */
+function buildZohoUrl() {
+    let url = ZOHO_CONFIG.bookingsUrl;
+
+    // Ajouter les paramètres embed et couleurs
+    const params = new URLSearchParams({
+        embed: 'true',
+        color: ZOHO_CONFIG.colors.primary,
+        locale: ZOHO_CONFIG.locale || 'fr'
+    });
+
+    return `${url}?${params.toString()}`;
 }
 
 /**
  * Ajoute un bouton pour ouvrir Zoho Bookings dans une nouvelle fenêtre
  */
 function addZohoBookingButton() {
-    const appointmentSection = document.querySelector('#rendezvous');
-    if (!appointmentSection) return;
+    const sectionTitle = document.querySelector('#rendezvous .section-title');
+    if (!sectionTitle) return;
+
+    // Vérifier si le bouton existe déjà
+    if (document.querySelector('.zoho-booking-btn')) return;
 
     // Créer le bouton
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = 'text-align: center; margin-top: 1.5rem;';
+
     const bookingButton = document.createElement('button');
-    bookingButton.className = 'btn btn-primary zoho-booking-btn';
+    bookingButton.className = 'btn btn-accent zoho-booking-btn';
     bookingButton.innerHTML = `
         <i class="fas fa-calendar-check"></i>
-        Réserver un RDV avec Zoho Calendar
+        Ouvrir le calendrier de réservation
     `;
     bookingButton.style.cssText = `
-        margin-top: 20px;
         padding: 15px 30px;
         font-size: 16px;
         font-weight: 600;
-        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin: 20px auto;
     `;
 
     // Ajouter l'événement click
     bookingButton.addEventListener('click', function() {
-        window.open(ZOHO_CONFIG.bookingsUrl, '_blank', 'width=800,height=600');
+        openZohoBookings();
     });
 
-    // Effet hover
-    bookingButton.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-2px)';
-        this.style.boxShadow = '0 10px 20px rgba(30, 58, 138, 0.3)';
-    });
-
-    bookingButton.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-        this.style.boxShadow = 'none';
-    });
-
-    // Insérer le bouton
-    const sectionTitle = appointmentSection.querySelector('.section-title');
-    if (sectionTitle) {
-        sectionTitle.appendChild(bookingButton);
-    }
+    buttonContainer.appendChild(bookingButton);
+    sectionTitle.appendChild(buttonContainer);
 }
 
 /**
- * Configuration de l'API Zoho pour synchronisation avancée
- * Cette fonction nécessite un backend pour gérer l'authentification OAuth
+ * Ouvre Zoho Bookings dans une nouvelle fenêtre
  */
-async function setupZohoAPI() {
-    console.log('Configuration API Zoho - Nécessite un backend pour OAuth');
+function openZohoBookings() {
+    const url = buildZohoUrl();
+    const width = Math.min(900, window.innerWidth - 40);
+    const height = Math.min(700, window.innerHeight - 40);
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
 
-    // Note: L'intégration complète de l'API Zoho nécessite:
-    // 1. Un backend pour gérer l'authentification OAuth 2.0
-    // 2. Des tokens d'accès sécurisés
-    // 3. La gestion du refresh des tokens
-
-    // Pour un site frontend-only, utilisez l'iframe ou le bouton de réservation
-    console.warn('Pour un site frontend-only, utilisez l\'iframe Zoho Bookings');
+    window.open(
+        url,
+        'ZohoBookings',
+        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    );
 }
 
 /**
- * Fonction pour obtenir les créneaux disponibles depuis Zoho
- * (Nécessite une authentification backend)
+ * Affiche un message d'erreur de configuration
  */
-async function getAvailableSlots(date) {
-    // Cette fonction nécessiterait un backend pour gérer l'authentification
-    console.warn('getAvailableSlots nécessite un backend pour l\'authentification OAuth');
-    return [];
-}
+function showConfigurationError() {
+    const calendarWidget = document.querySelector('.calendar-widget');
+    if (!calendarWidget) return;
 
-/**
- * Fonction pour créer un rendez-vous dans Zoho Calendar
- * (Nécessite une authentification backend)
- */
-async function createAppointment(appointmentData) {
-    // Cette fonction nécessiterait un backend pour gérer l'authentification
-    console.warn('createAppointment nécessite un backend pour l\'authentification OAuth');
-    return null;
-}
-
-/**
- * Alternative: Intégration avec Zoho Forms
- * Plus simple que l'API Calendar pour un site frontend-only
- */
-function setupZohoForms() {
-    // Vous pouvez créer un formulaire Zoho Forms et l'intégrer ici
-    // https://www.zoho.com/forms/
-
-    const zohoFormUrl = 'VOTRE_URL_ZOHO_FORMS'; // Remplacez par votre URL Zoho Forms
-
-    const iframe = document.createElement('iframe');
-    iframe.src = zohoFormUrl;
-    iframe.style.cssText = `
-        width: 100%;
-        height: 700px;
-        border: none;
-        border-radius: 8px;
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'zoho-config-error';
+    errorDiv.style.cssText = `
+        padding: 2rem;
+        background: #fee;
+        border: 2px solid #fcc;
+        border-radius: 12px;
+        text-align: center;
+        color: #c00;
+    `;
+    errorDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+        <h3>Configuration manquante</h3>
+        <p>Le fichier <code>js/config.js</code> n'est pas chargé.</p>
+        <p>Veuillez vérifier que le fichier est bien importé dans index.html</p>
     `;
 
-    const appointmentSection = document.querySelector('#rendezvous');
-    if (appointmentSection) {
-        appointmentSection.appendChild(iframe);
+    calendarWidget.innerHTML = '';
+    calendarWidget.appendChild(errorDiv);
+}
+
+/**
+ * Affiche un avertissement de configuration
+ */
+function showConfigurationWarning() {
+    const calendarWidget = document.querySelector('.calendar-widget');
+    if (!calendarWidget) return;
+
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'zoho-config-warning';
+    warningDiv.style.cssText = `
+        padding: 2rem;
+        background: #fffbeb;
+        border: 2px solid #fbbf24;
+        border-radius: 12px;
+        text-align: center;
+        color: #92400e;
+    `;
+    warningDiv.innerHTML = `
+        <i class="fas fa-info-circle" style="font-size: 3rem; margin-bottom: 1rem; color: #f59e0b;"></i>
+        <h3>Configuration Zoho Bookings requise</h3>
+        <p><strong>Pour activer les réservations en ligne :</strong></p>
+        <ol style="text-align: left; max-width: 500px; margin: 1rem auto;">
+            <li>Créez un compte sur <a href="https://www.zoho.com/bookings/" target="_blank" style="color: #1e3a8a; font-weight: 600;">Zoho Bookings</a></li>
+            <li>Configurez vos services et disponibilités</li>
+            <li>Obtenez votre URL de réservation</li>
+            <li>Modifiez <code>js/config.js</code> et ajoutez votre URL</li>
+        </ol>
+        <p style="margin-top: 1rem;">
+            <a href="INTEGRATION-ZOHO-REEL.md" style="color: #1e3a8a; font-weight: 600;">
+                📖 Consultez le guide complet d'intégration
+            </a>
+        </p>
+    `;
+
+    // Insérer avant le calendrier
+    const calendarHeader = calendarWidget.querySelector('.calendar-header');
+    if (calendarHeader) {
+        calendarHeader.insertAdjacentElement('afterend', warningDiv);
     }
 }
 
-// Initialiser au chargement de la page
-document.addEventListener('DOMContentLoaded', function() {
-    // Vérifier si la configuration Zoho est définie
-    if (ZOHO_CONFIG.bookingsUrl && ZOHO_CONFIG.bookingsUrl !== 'https://calendar.zoho.com/book/YOUR_BOOKING_PAGE') {
-        initZohoIntegration();
-    } else {
-        console.warn('⚠️ Configuration Zoho manquante. Veuillez configurer ZOHO_CONFIG dans zoho-integration.js');
-        console.info('Pour configurer Zoho Bookings:');
-        console.info('1. Créez un compte Zoho Calendar/Bookings');
-        console.info('2. Configurez votre page de réservation');
-        console.info('3. Récupérez l\'URL de votre page de réservation');
-        console.info('4. Mettez à jour ZOHO_CONFIG.bookingsUrl dans ce fichier');
-    }
-});
+/**
+ * Affiche une erreur de chargement de l'iframe
+ */
+function showIframeError(container) {
+    container.innerHTML = `
+        <div style="padding: 2rem; text-align: center; background: #fee; border-radius: 12px;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 2rem; color: #c00;"></i>
+            <h4 style="margin: 1rem 0; color: #c00;">Erreur de chargement</h4>
+            <p>Impossible de charger le calendrier Zoho Bookings.</p>
+            <p>Vérifiez que l'URL configurée est correcte.</p>
+            <button onclick="location.reload()" class="btn btn-accent" style="margin-top: 1rem;">
+                <i class="fas fa-sync"></i> Recharger la page
+            </button>
+        </div>
+    `;
+}
 
 /**
- * ===== GUIDE DE CONFIGURATION ZOHO CALENDAR =====
- *
- * Pour intégrer votre calendrier Zoho professionnel:
- *
- * OPTION 1: Zoho Bookings (Recommandé - Frontend Only)
- * ----------------------------------------------------
- * 1. Allez sur https://www.zoho.com/bookings/
- * 2. Créez un compte ou connectez-vous
- * 3. Configurez vos services et disponibilités
- * 4. Obtenez le lien de votre page de réservation
- * 5. Mettez à jour ZOHO_CONFIG.bookingsUrl avec ce lien
- *
- * OPTION 2: Zoho Calendar avec iframe
- * ------------------------------------
- * 1. Connectez-vous à Zoho Calendar
- * 2. Allez dans Paramètres > Partage
- * 3. Générez un lien d'intégration iframe
- * 4. Utilisez ce lien dans setupZohoIframe()
- *
- * OPTION 3: API Zoho Calendar (Nécessite un backend)
- * ---------------------------------------------------
- * 1. Créez une application dans Zoho Developer Console
- * 2. Configurez OAuth 2.0
- * 3. Créez un backend pour gérer l'authentification
- * 4. Utilisez les endpoints de l'API Calendar
- *
- * Pour un site frontend-only, utilisez l'OPTION 1 (Zoho Bookings)
+ * ===== FONCTIONS UTILITAIRES =====
  */
+
+/**
+ * Vérifie si Zoho Bookings est correctement configuré
+ */
+function isZohoConfigured() {
+    return (
+        typeof ZOHO_CONFIG !== 'undefined' &&
+        ZOHO_CONFIG.bookingsUrl &&
+        !ZOHO_CONFIG.bookingsUrl.includes('YOUR_BOOKING_PAGE')
+    );
+}
+
+/**
+ * Récupère la configuration Zoho
+ */
+function getZohoConfig() {
+    return typeof ZOHO_CONFIG !== 'undefined' ? ZOHO_CONFIG : null;
+}
+
+// Export pour utilisation externe
+window.ZohoBookings = {
+    isConfigured: isZohoConfigured,
+    getConfig: getZohoConfig,
+    open: openZohoBookings
+};
+
+console.log('📅 Module Zoho Bookings chargé');
