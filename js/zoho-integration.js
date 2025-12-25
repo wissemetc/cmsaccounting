@@ -1,101 +1,105 @@
 /**
  * ╔═══════════════════════════════════════════════════════════════════╗
- * ║            INTÉGRATION CAL.COM - SYSTÈME DE RÉSERVATION          ║
+ * ║            INTÉGRATION CAL.COM VIA NETLIFY FUNCTIONS             ║
  * ╚═══════════════════════════════════════════════════════════════════╝
  *
- * Ce fichier intègre Cal.com via le widget embed (pas d'API nécessaire)
- * pour la prise de rendez-vous en ligne avec synchronisation temps réel.
+ * Ce fichier intègre Cal.com via des fonctions serverless Netlify
+ * pour éviter les problèmes CORS et gérer l'API Cal.com côté serveur.
  *
- * Configuration requise :
- * - CALCOM_USERNAME : Votre username Cal.com
- * - CALCOM_EVENT_SLUG : Le slug de votre type d'événement
+ * Architecture :
+ * Frontend → Netlify Functions → API Cal.com → Calendrier Zoho
  *
  * Avantages :
- * ✅ 100% gratuit (aucune API key nécessaire)
- * ✅ Aucun risque de double réservation
- * ✅ Synchronisation temps réel automatique
- * ✅ Emails automatiques
+ * ✅ 100% gratuit (Netlify Functions inclus)
  * ✅ Pas de problème CORS
+ * ✅ API Cal.com appelée côté serveur
+ * ✅ Vraies disponibilités en temps réel
+ * ✅ Réservation en 1 clic
  */
 
 /**
- * Initialise l'intégration Cal.com via le bouton/lien
- * Cette méthode ouvre Cal.com dans une popup ou redirige vers Cal.com
- */
-function initCalcomIntegration() {
-    console.log('🚀 Initialisation intégration Cal.com (mode widget)...');
-
-    // Charger le script Cal.com embed
-    if (!document.querySelector('script[src*="cal.com/embed"]')) {
-        const script = document.createElement('script');
-        script.src = 'https://cal.com/embed/embed.js';
-        script.async = true;
-        document.head.appendChild(script);
-        console.log('✅ Script Cal.com embed chargé');
-    }
-}
-
-/**
- * Ouvre Cal.com avec les informations du formulaire pré-remplies
- * @param {Object} formData - Données du formulaire
- */
-function openCalcomBooking(formData) {
-    // Construire l'URL Cal.com avec paramètres pré-remplis
-    const calcomUrl = `https://cal.com/${APPOINTMENT_CONFIG.CALCOM_USERNAME}/${APPOINTMENT_CONFIG.CALCOM_EVENT_SLUG}`;
-
-    const params = new URLSearchParams({
-        name: formData.name || '',
-        email: formData.email || '',
-        notes: `Service: ${formData.service}\nType: ${formData.meetingType}\nEntreprise: ${formData.company || 'Non spécifié'}\nMessage: ${formData.message || ''}`
-    });
-
-    const fullUrl = `${calcomUrl}?${params.toString()}`;
-
-    console.log('📅 Ouverture Cal.com:', fullUrl);
-
-    // Option 1 : Ouvrir dans une popup
-    const popup = window.open(fullUrl, 'cal-booking', 'width=800,height=800,scrollbars=yes');
-
-    if (!popup) {
-        // Si popup bloquée, rediriger dans le même onglet
-        window.location.href = fullUrl;
-    }
-
-    return true;
-}
-
-/**
- * Fonction factice pour compatibilité avec le code existant
- * Retourne un succès immédiat car Cal.com gère la réservation
- */
-async function createCalcomBooking(formData) {
-    console.log('📅 Ouverture de Cal.com pour réservation...');
-
-    // Ouvrir Cal.com avec les données pré-remplies
-    openCalcomBooking(formData);
-
-    // Retourner un succès factice (la vraie réservation se fait sur Cal.com)
-    return {
-        success: true,
-        message: 'Redirection vers Cal.com pour finaliser la réservation',
-        method: 'widget'
-    };
-}
-
-/**
- * Fonction factice pour compatibilité
- * Les disponibilités sont gérées directement par Cal.com
+ * Récupère les disponibilités Cal.com via Netlify Function
+ * @param {string} dateFrom - Date de début (YYYY-MM-DD)
+ * @param {string} dateTo - Date de fin (YYYY-MM-DD)
+ * @returns {Promise<Object>} Les disponibilités
  */
 async function getCalcomAvailability(dateFrom, dateTo) {
-    console.log('ℹ️ Les disponibilités sont gérées par Cal.com directement');
-    return null;
+    try {
+        console.log(`📅 Récupération disponibilités du ${dateFrom} au ${dateTo}...`);
+
+        const response = await fetch('/.netlify/functions/get-availability', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                dateFrom,
+                dateTo
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Erreur lors de la récupération des disponibilités');
+        }
+
+        const data = await response.json();
+        console.log('✅ Disponibilités récupérées:', data);
+
+        return data.availability;
+
+    } catch (error) {
+        console.error('❌ Erreur récupération disponibilités:', error);
+        return null;
+    }
+}
+
+/**
+ * Crée une réservation sur Cal.com via Netlify Function
+ * @param {Object} formData - Données du formulaire
+ * @returns {Promise<Object>} La réservation créée
+ */
+async function createCalcomBooking(formData) {
+    try {
+        console.log('📅 Création de la réservation Cal.com...');
+
+        const response = await fetch('/.netlify/functions/create-booking', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Erreur lors de la création de la réservation');
+        }
+
+        console.log('✅ Réservation Cal.com créée:', data);
+        return data.booking;
+
+    } catch (error) {
+        console.error('❌ Erreur création réservation:', error);
+        throw error;
+    }
 }
 
 /**
  * Fonction factice pour compatibilité
  */
 async function getCalcomEventTypeId() {
+    // Cette fonction n'est plus nécessaire car gérée côté serveur
     return null;
+}
+
+/**
+ * Initialise l'intégration Cal.com
+ */
+function initCalcomIntegration() {
+    console.log('🚀 Initialisation intégration Cal.com (via Netlify Functions)...');
+    console.log('✅ Backend serverless configuré');
 }
 
 // Initialiser Cal.com au chargement de la page
@@ -112,6 +116,6 @@ if (typeof window !== 'undefined') {
     window.getCalcomEventTypeId = getCalcomEventTypeId;
     window.createCalcomBooking = createCalcomBooking;
     window.getCalcomAvailability = getCalcomAvailability;
-    window.openCalcomBooking = openCalcomBooking;
 }
+
 

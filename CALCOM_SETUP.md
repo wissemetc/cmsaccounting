@@ -1,20 +1,26 @@
-# 📅 Configuration Cal.com - Système de Réservation
+# 📅 Configuration Cal.com avec Netlify Functions
 
 ## 🎯 Résumé
 
-Votre site utilise maintenant **Cal.com** pour gérer les réservations en temps réel, avec synchronisation automatique vers votre calendrier Zoho.
+Votre site utilise maintenant **Cal.com** avec **Netlify Functions** (backend serverless) pour gérer les réservations en temps réel, avec synchronisation automatique vers votre calendrier Zoho.
+
+**Architecture** :
+```
+Frontend → Netlify Functions → Cal.com API → Calendrier Zoho
+```
 
 **Avantages** :
-- ✅ 100% gratuit (plan gratuit Cal.com)
+- ✅ 100% gratuit (Netlify Functions inclus dans le plan gratuit)
+- ✅ Pas de problème CORS (API appelée côté serveur)
 - ✅ Aucun risque de double réservation
 - ✅ Synchronisation temps réel avec tous les visiteurs
-- ✅ Emails de confirmation automatiques
+- ✅ Vraies disponibilités Cal.com affichées dans le calendrier
+- ✅ Réservation en 1 clic (formulaire + booking Cal.com)
 - ✅ Design de votre site conservé à 100%
-- ✅ Intégration transparente
 
 ---
 
-## 🔧 Configuration en 3 étapes
+## 🔧 Configuration en 4 étapes
 
 ### Étape 1 : Récupérer votre clé API Cal.com
 
@@ -24,44 +30,72 @@ Votre site utilise maintenant **Cal.com** pour gérer les réservations en temps
 4. Donnez un nom (ex: "CMS Website")
 5. **Copiez la clé** générée (commence par `cal_live_...`)
 
-⚠️ **ATTENTION** : Cette clé est secrète, ne la partagez jamais publiquement !
+⚠️ **ATTENTION** : Cette clé est secrète, ne la partagez JAMAIS publiquement !
 
-### Étape 2 : Configurer le fichier js/main.js
+### Étape 2 : Configurer les variables d'environnement Netlify
 
-Ouvrez `js/main.js` et cherchez la ligne **~199** :
+⚠️ **IMPORTANT** : NE mettez PAS votre clé API dans le code source !
+
+1. Allez sur [app.netlify.com](https://app.netlify.com)
+2. Sélectionnez votre site
+3. Allez dans **Site settings** → **Environment variables**
+4. Ajoutez les 3 variables suivantes :
+
+| Variable | Valeur | Exemple |
+|----------|--------|---------|
+| `CALCOM_API_KEY` | Votre clé API Cal.com | `cal_live_92f0e4e18b01...` |
+| `CALCOM_USERNAME` | Votre username Cal.com | `cmsaccounting.tn` |
+| `CALCOM_EVENT_SLUG` | Le slug de votre event type | `30min` |
+
+5. Cliquez sur **Save**
+6. **Redéployez** votre site pour appliquer les variables
+
+### Étape 3 : Vérifier la configuration locale (js/main.js)
+
+Les variables dans `js/main.js` (lignes ~199-202) servent uniquement de référence :
 
 ```javascript
-CALCOM_API_KEY: "cal_live_xxxxxxxxxxxxxxx", // ⚠️ REMPLACEZ PAR VOTRE VRAIE CLÉ API
+// Ces valeurs NE SONT PAS utilisées en production
+// Les vraies valeurs sont dans les variables d'environnement Netlify
+CALCOM_API_KEY: "cal_live_xxxxxxxxxxxxxxx",  // ⚠️ Placeholder seulement
+CALCOM_USERNAME: "cmsaccounting.tn",         // ✅ Référence
+CALCOM_EVENT_SLUG: "30min",                  // ✅ Référence
 ```
 
-**Remplacez** `cal_live_xxxxxxxxxxxxxxx` par votre vraie clé API.
+### Étape 4 : Vérifier les fichiers Netlify Functions
 
-### Étape 3 : Vérifier les paramètres
+Assurez-vous que ces fichiers existent :
 
-Vérifiez que les paramètres suivants sont corrects (lignes ~200-202) :
-
-```javascript
-CALCOM_USERNAME: "mohamedshili",          // Votre username Cal.com
-CALCOM_EVENT_SLUG: "consultation-30min",  // Le slug de votre event type
-CALCOM_API_URL: "https://api.cal.com/v1"  // URL de l'API (ne pas modifier)
+```
+netlify/
+├── functions/
+│   ├── get-availability.js   ✅ Récupère les disponibilités Cal.com
+│   └── create-booking.js      ✅ Crée les réservations Cal.com
+└── netlify.toml               ✅ Configuration Netlify
 ```
 
-**Comment vérifier** :
-- Username : visible dans l'URL de votre profil Cal.com (`cal.com/VOTRE-USERNAME`)
-- Event slug : visible dans l'URL de votre event type (`cal.com/username/EVENT-SLUG`)
+Ces fichiers sont déjà configurés et ne nécessitent aucune modification.
 
 ---
 
 ## ✅ Comment ça fonctionne
 
+### Architecture Netlify Functions :
+
+**Backend serverless (gratuit avec Netlify)** :
+- `get-availability.js` : Récupère les disponibilités Cal.com sans CORS
+- `create-booking.js` : Crée les réservations sur Cal.com sans CORS
+- Variables d'environnement sécurisées (clé API jamais exposée au client)
+
 ### Affichage dynamique des disponibilités :
 
-Le calendrier affiche **uniquement les créneaux que vous avez réellement ouverts dans Cal.com** :
+Le calendrier affiche **uniquement les créneaux réellement disponibles sur Cal.com** :
 
-1. **Chargement initial** : Le calendrier récupère vos disponibilités Cal.com pour les 3 prochains mois
-2. **Affichage intelligent** : Seuls les jours avec des créneaux disponibles sont cliquables
-3. **Créneaux en temps réel** : Les horaires affichés correspondent exactement à vos disponibilités Cal.com
-4. **Pas de créneaux statiques** : Plus besoin de configurer WORKING_HOURS ou ALWAYS_BUSY manuellement
+1. **Chargement initial** : Netlify Function récupère vos disponibilités Cal.com pour les 3 prochains mois
+2. **Pas de CORS** : L'API Cal.com est appelée côté serveur (Netlify Functions)
+3. **Affichage intelligent** : Seuls les jours avec créneaux disponibles sont cliquables
+4. **Créneaux en temps réel** : Les horaires affichés = vos disponibilités Cal.com exactes
+5. **Fallback intelligent** : Si Cal.com indisponible, génération statique avec WORKING_HOURS
 
 ### Flux de réservation :
 
@@ -188,21 +222,46 @@ Aucun visiteur ne pourra réserver ce créneau sur votre site.
 
 ---
 
-## 🚀 Déploiement
+## 🚀 Déploiement sur Netlify
 
-Une fois la configuration terminée :
+### Déploiement initial :
 
-1. **Testez localement** en ouvrant index.html dans le navigateur
-2. **Vérifiez** que les réservations sont créées sur cal.com
-3. **Déployez** sur votre serveur de production
-4. **Testez en production** avec une vraie réservation
+1. **Connectez votre dépôt Git à Netlify** :
+   - Allez sur [app.netlify.com](https://app.netlify.com)
+   - Cliquez sur "Add new site" → "Import an existing project"
+   - Sélectionnez votre dépôt GitHub
 
-⚠️ **IMPORTANT** : Ne commitez JAMAIS votre vraie clé API dans un dépôt public !
+2. **Configuration du build** :
+   ```
+   Build command: (laissez vide)
+   Publish directory: .
+   Functions directory: netlify/functions
+   ```
 
-Si vous utilisez Git :
-- Remplacez la clé par un placeholder avant de commit
-- Utilisez des variables d'environnement en production
-- Ou configurez la clé directement sur le serveur
+3. **Configurez les variables d'environnement** (voir Étape 2 ci-dessus)
+
+4. **Déployez** : Cliquez sur "Deploy site"
+
+### Mise à jour après changement :
+
+```bash
+git add .
+git commit -m "Update: Activation du calendrier dynamique Cal.com"
+git push -u origin claude/free-booking-alternative-EurCo
+```
+
+Netlify redéploiera automatiquement votre site.
+
+### Test en production :
+
+1. **Ouvrez votre site** (https://votre-site.netlify.app)
+2. **Vérifiez la console** (F12) : doit afficher "✅ Disponibilités Cal.com chargées"
+3. **Sélectionnez une date** : seuls les créneaux Cal.com s'affichent
+4. **Testez une réservation** : doit créer le booking sur Cal.com
+5. **Vérifiez** : booking visible sur cal.com et dans Zoho Calendar
+
+⚠️ **IMPORTANT** : Ne commitez JAMAIS votre vraie clé API dans Git !
+Les variables d'environnement Netlify sont sécurisées et ne sont jamais exposées au client.
 
 ---
 

@@ -1,0 +1,19 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = false
+
+[functions]
+  node_bundler = "esbuild"
+
+# Variables d'environnement pour Cal.com
+# À configurer dans Netlify UI : Site settings → Environment variables
+#
+# CALCOM_API_KEY = votre_clé_api_cal_com
+# CALCOM_USERNAME = mohamedshili
+# CALCOM_EVENT_SLUG = consultation-30min

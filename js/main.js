@@ -878,7 +878,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         // ===== GESTION DU CALENDRIER AMÉLIORÉE =====
-        function renderCalendar() {
+        async function renderCalendar() {
             const calendar = document.getElementById('calendar');
             const calendarHeaders = document.getElementById('calendarHeaders');
             const monthYear = document.getElementById('currentMonth');
@@ -904,8 +904,8 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             const today = getCurrentTimeInTunis();
             const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-            // Note: Disponibilités gérées statiquement (pas d'appel API Cal.com)
-            // await loadCalcomAvailability(); // Désactivé - cause erreur CORS
+            // Charger les disponibilités Cal.com via Netlify Functions
+            await loadCalcomAvailability();
 
             calendar.innerHTML = '';
 
@@ -968,19 +968,29 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         function checkAvailableSlotsForDate(date, dayOfWeek) {
+            // Si Cal.com disponibilités sont chargées, les utiliser
+            if (state.calcomAvailability) {
+                const calcomSlots = getAvailableSlotsForDate(date);
+                if (calcomSlots && calcomSlots.length > 0) {
+                    return true;
+                }
+                return false;
+            }
+
+            // Sinon, fallback sur vérification statique
             const now = getCurrentTimeInTunis();
             const isToday = new Date(date).toDateString() === now.toDateString();
-            
+
             for (let hour = Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start); hour <= Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.end); hour++) {
-                for (let minute = (hour === Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start) ? 30 : 0); 
-                     minute < 60; 
+                for (let minute = (hour === Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start) ? 30 : 0);
+                     minute < 60;
                      minute += APPOINTMENT_CONFIG.APPOINTMENT_DURATION) {
-                    
+
                     const timeDecimal = hour + (minute / 60);
                     if (timeDecimal > APPOINTMENT_CONFIG.WORKING_HOURS.end) break;
-                    
+
                     const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                    
+
                     let isAlwaysBusy = false;
                     if (APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek]) {
                         APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek].forEach(busySlot => {
@@ -989,17 +999,17 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                             }
                         });
                     }
-                    
+
                     if (isAlwaysBusy) continue;
-                    
+
                     if (isSlotReserved(date, timeString)) continue;
-                    
+
                     if (isToday && isTimeInPast(date, timeString)) continue;
-                    
+
                     return true;
                 }
             }
-            
+
             return false;
         }
 
@@ -1045,61 +1055,77 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             const now = getCurrentTimeInTunis();
             const isToday = new Date(date).toDateString() === now.toDateString();
             let hasAvailableSlots = false;
+            let timeSlotsToDisplay = [];
 
-            // Générer les créneaux statiquement
-            for (let hour = Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start); hour <= Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.end); hour++) {
-                for (let minute = (hour === Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start) ? 30 : 0);
-                     minute < 60;
-                     minute += APPOINTMENT_CONFIG.APPOINTMENT_DURATION) {
-
-                    const timeDecimal = hour + (minute / 60);
-                    if (timeDecimal > APPOINTMENT_CONFIG.WORKING_HOURS.end) break;
-
-                    const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-                    const timeSlot = document.createElement('div');
-                    timeSlot.className = 'time-slot';
-                    timeSlot.textContent = timeString;
-                    timeSlot.dataset.time = timeString;
-
-                    let isAlwaysBusy = false;
-
-                    if (APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek]) {
-                        APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek].forEach(busySlot => {
-                            if (timeDecimal >= busySlot.start && timeDecimal < busySlot.end) {
-                                isAlwaysBusy = true;
-                            }
-                        });
-                    }
-
-                    const isBooked = isSlotReserved(date, timeString);
-                    const isPast = isToday && isTimeInPast(date, timeString);
-
-                    if (isAlwaysBusy) {
-                        timeSlot.classList.add('disabled');
-                        timeSlot.style.display = 'none';
-                    }
-                    else if (isBooked) {
-                        timeSlot.classList.add('booked');
-                        timeSlot.title = 'Déjà réservé';
-                        timeSlot.style.cursor = 'not-allowed';
-                    }
-                    else if (isPast) {
-                        timeSlot.classList.add('past');
-                        timeSlot.title = 'Créneau passé';
-                        timeSlot.style.cursor = 'not-allowed';
-                        timeSlot.style.opacity = '0.5';
-                    }
-                    else {
-                        hasAvailableSlots = true;
-                        timeSlot.addEventListener('click', function() {
-                            selectTime(this);
-                        });
-                        timeSlot.title = 'Disponible - Cliquez pour sélectionner';
-                    }
-
-                    timeSlots.appendChild(timeSlot);
+            // Si Cal.com disponibilités sont chargées, les utiliser
+            if (state.calcomAvailability) {
+                const calcomSlots = getAvailableSlotsForDate(date);
+                if (calcomSlots && calcomSlots.length > 0) {
+                    timeSlotsToDisplay = calcomSlots;
+                    console.log(`📅 Affichage de ${timeSlotsToDisplay.length} créneaux Cal.com pour ${date}`);
                 }
             }
+
+            // Si pas de créneaux Cal.com, générer statiquement
+            if (timeSlotsToDisplay.length === 0) {
+                console.log('⚠️ Pas de créneaux Cal.com, génération statique');
+                for (let hour = Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start); hour <= Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.end); hour++) {
+                    for (let minute = (hour === Math.floor(APPOINTMENT_CONFIG.WORKING_HOURS.start) ? 30 : 0);
+                         minute < 60;
+                         minute += APPOINTMENT_CONFIG.APPOINTMENT_DURATION) {
+
+                        const timeDecimal = hour + (minute / 60);
+                        if (timeDecimal > APPOINTMENT_CONFIG.WORKING_HOURS.end) break;
+
+                        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+
+                        let isAlwaysBusy = false;
+                        if (APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek]) {
+                            APPOINTMENT_CONFIG.ALWAYS_BUSY[dayOfWeek].forEach(busySlot => {
+                                if (timeDecimal >= busySlot.start && timeDecimal < busySlot.end) {
+                                    isAlwaysBusy = true;
+                                }
+                            });
+                        }
+
+                        if (!isAlwaysBusy) {
+                            timeSlotsToDisplay.push(timeString);
+                        }
+                    }
+                }
+            }
+
+            // Afficher tous les créneaux
+            timeSlotsToDisplay.forEach(timeString => {
+                const timeSlot = document.createElement('div');
+                timeSlot.className = 'time-slot';
+                timeSlot.textContent = timeString;
+                timeSlot.dataset.time = timeString;
+
+                const isBooked = isSlotReserved(date, timeString);
+                const isPast = isToday && isTimeInPast(date, timeString);
+
+                if (isBooked) {
+                    timeSlot.classList.add('booked');
+                    timeSlot.title = 'Déjà réservé';
+                    timeSlot.style.cursor = 'not-allowed';
+                }
+                else if (isPast) {
+                    timeSlot.classList.add('past');
+                    timeSlot.title = 'Créneau passé';
+                    timeSlot.style.cursor = 'not-allowed';
+                    timeSlot.style.opacity = '0.5';
+                }
+                else {
+                    hasAvailableSlots = true;
+                    timeSlot.addEventListener('click', function() {
+                        selectTime(this);
+                    });
+                    timeSlot.title = 'Disponible - Cliquez pour sélectionner';
+                }
+
+                timeSlots.appendChild(timeSlot);
+            });
 
             if (!hasAvailableSlots) {
                 const noSlotsMessage = document.createElement('div');
@@ -1275,17 +1301,31 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         async function processAppointment(formData) {
-            // 1. Sauvegarder localement
+            // 1. Créer la réservation sur Cal.com via Netlify Function
+            try {
+                console.log('📅 Création de la réservation Cal.com...');
+                const calcomBooking = await window.createCalcomBooking(formData);
+                console.log('✅ Réservation Cal.com créée:', calcomBooking);
+
+                // Stocker l'ID de réservation Cal.com
+                formData.calcomBookingId = calcomBooking?.id || calcomBooking?.uid;
+            } catch (calcomError) {
+                console.error('❌ Erreur création réservation Cal.com:', calcomError);
+                // On continue quand même pour sauvegarder localement
+            }
+
+            // 2. Sauvegarder localement
             const slotKey = saveReservedSlot(formData.date, formData.time, {
                 clientName: formData.name,
                 clientEmail: formData.email,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                calcomBookingId: formData.calcomBookingId
             });
 
             state.appointments[slotKey] = formData;
             localStorage.setItem('cms_appointments', JSON.stringify(state.appointments));
 
-            // 2. Mettre à jour l'interface
+            // 3. Mettre à jour l'interface
             const timeSlot = document.querySelector(`.time-slot[data-time="${formData.time}"]`);
             if (timeSlot && !timeSlot.classList.contains('disabled')) {
                 timeSlot.classList.remove('selected');
@@ -1294,7 +1334,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 timeSlot.style.cursor = 'not-allowed';
             }
 
-            // 3. Envoyer les emails de confirmation
+            // 4. Envoyer les emails de confirmation
             try {
                 await sendEmails(formData);
                 console.log('✅ Emails de confirmation envoyés');
@@ -1302,16 +1342,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 console.warn('⚠️ Erreur lors de l\'envoi des emails:', emailError);
             }
 
-            // 4. Ouvrir Cal.com pour finaliser la réservation (optionnel)
-            try {
-                console.log('📅 Ouverture de Cal.com pour finaliser la réservation...');
-                if (window.openCalcomBooking) {
-                    window.openCalcomBooking(formData);
-                }
-            } catch (calcomError) {
-                console.warn('⚠️ Cal.com non disponible:', calcomError);
-            }
-
+            // 5. Rafraîchir les disponibilités
             updateCalendarAvailability();
 
             return Promise.resolve();
