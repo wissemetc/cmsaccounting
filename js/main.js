@@ -1,7 +1,7 @@
         // ===== CONFIGURATION =====
         const CONFIG = {
             business: {
-                email: "contact@cmscomptable.tn",
+                email: "contact@cmsaccounting.tn",
                 phone: "+21653810911",
                 address: "Avenue Farhat Hached, Bouhajla Kairouan 3180"
             }
@@ -9,10 +9,10 @@
 
         // ===== CONFIGURATION EMAILJS =====
         const EMAILJS_CONFIG = {
-            PUBLIC_KEY: "g5_Y5dazTzArrqBHX",
-            SERVICE_ID: "confirmation",
-            TEMPLATE_CABINET: "template_2s928vj",
-            TEMPLATE_CLIENT: "template_o0gt2ed"
+            PUBLIC_KEY: "2af7pUkmTat28ZOT2",
+            SERVICE_ID: "service_j03orpd",
+            TEMPLATE_CABINET: "template_fs8fhi2",
+            TEMPLATE_CLIENT: "template_a0lfjuh"
         };
 
         // ===== DONNÉES DES ACTUALITÉS AMÉLIORÉES =====
@@ -165,7 +165,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
 
         // ===== GESTION DU PARTAGE PAR EMAIL SIMPLIFIÉE =====
         const SHARE_CONFIG = {
-            siteUrl: 'https://cmscomptable.tn',
+            siteUrl: 'https://cmsaccounting.tn',
             siteName: 'CMS Comptable Tunisie',
             twitterHandle: '@cmscomptable',
             cabinetEmail: 'cabinetshilimohamed@gmail.com',
@@ -192,7 +192,7 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             },
             TIMEZONE_OFFSET: 1,
             SITE_NAME: "CMS Comptable Tunisie",
-            BUSINESS_EMAIL: "contact@cmscomptable.tn",
+            BUSINESS_EMAIL: "contact@cmsaccounting.tn",
             CABINET_PHONE: "+216 53 810 911",
             CABINET_ADDRESS: "Avenue Farhat Hached, Bouhajla Kairouan 3180",
             // Configuration Cal.com
