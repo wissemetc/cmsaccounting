@@ -1,55 +1,55 @@
-        /* ===== VARIABLES CSS PROFESSIONNELLES ===== */
+        /* ===== VARIABLES CSS OPTIMISÉES ===== */
         :root {
-            /* Palette de couleurs principale - Moderne & Professionnelle */
-            --primary: #1e3a8a;          /* Bleu marine professionnel */
-            --primary-dark: #1e40af;     /* Bleu marine foncé */
-            --primary-light: #3b82f6;    /* Bleu clair moderne */
-            --secondary: #0ea5e9;        /* Bleu ciel dynamique */
-            --accent: #d97706;           /* Or/Ambre sophistiqué */
-            --accent-dark: #b45309;      /* Or foncé */
-            --accent-light: #f59e0b;     /* Or lumineux */
-            --gold: #eab308;             /* Doré élégant */
-            --gold-dark: #ca8a04;        /* Doré profond */
-            --success: #10b981;          /* Vert moderne */
-            --success-light: #34d399;    /* Vert clair */
-            --warning: #f59e0b;          /* Orange attention */
-            --info: #0ea5e9;             /* Bleu information */
-            --info-light: #38bdf8;       /* Bleu info clair */
+            /* Palette de couleurs principale */
+            --primary: #1a5276;
+            --primary-dark: #144262;
+            --primary-light: #2874a6;
+            --secondary: #2e86ab;
+            --accent: #e74c3c;
+            --accent-dark: #c0392b;
+            --accent-light: #ff6b6b;
+            --gold: #f39c12;
+            --gold-dark: #e67e22;
+            --success: #27ae60;
+            --success-light: #2ecc71;
+            --warning: #f39c12;
+            --info: #3498db;
+            --info-light: #5dade2;
 
-            /* Tons de gris modernes (Palette Tailwind) */
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
+            /* Tons de gris */
+            --gray-50: #f8f9fa;
+            --gray-100: #f1f2f6;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-400: #ced4da;
+            --gray-500: #6c757d;
+            --gray-600: #495057;
+            --gray-700: #343a40;
+            --gray-800: #212529;
+            --gray-900: #1a1d20;
 
             /* Couleurs de fond */
-            --dark: #1f2937;
-            --dark-light: #374151;
+            --dark: #2c3e50;
+            --dark-light: #34495e;
             --light: #ffffff;
-            --bg-light: #f9fafb;
+            --bg-light: #f8f9fa;
 
             /* Bordures */
-            --border: #e5e7eb;
-            --border-dark: #d1d5db;
+            --border: #e9ecef;
+            --border-dark: #dee2e6;
 
-            /* Ombres modernes et subtiles */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            /* Ombres */
+            --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 6px 12px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
             --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
-            /* Dégradés modernes */
-            --gradient-primary: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-            --gradient-accent: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-            --gradient-gold: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+            /* Dégradés */
+            --gradient-primary: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            --gradient-accent: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+            --gradient-gold: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
             --gradient-success: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);
             --gradient-dark: linear-gradient(135deg, var(--dark) 0%, var(--dark-light) 100%);
             
@@ -413,18 +413,22 @@
         }
 
         .logo-img {
-            width: 170px;
-            height: 50px;
+            width: auto;
+            height: 60px;
+            max-width: 100%;
+            object-fit: contain;
             border-radius: none;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--gray-700);
-            font-weight: 900;
-            font-size: 1.6rem;
-            border: none ;
-            box-shadow: var(--shadow-lg);
             transition: all var(--transition);
+        }
+
+        .logo-img img {
+            height: 60px;
+            width: auto;
+            max-width: 100%;
+            object-fit: contain;
         }
 
         .logo-text {
@@ -1930,6 +1934,14 @@
             min-width: 0;
         }
 
+        .footer-column img {
+            height: 80px;
+            width: auto;
+            max-width: 200px;
+            object-fit: contain;
+            margin-bottom: 1rem;
+        }
+
         .footer-column p {
             color: rgba(255, 255, 255, 0.9);
             line-height: 1.6;
@@ -3084,6 +3096,16 @@
         }
 
         @media (max-width: 768px) {
+            /* Logo responsive */
+            .logo-img, .logo-img img {
+                height: 45px;
+            }
+
+            .footer-column img {
+                height: 60px;
+                max-width: 150px;
+            }
+
             .hero { padding: 220px 0 80px; margin-top: 0; }
             .hero h1 { font-size: 2.5rem; }
             .hero-subtitle { font-size: 1.1rem; }
@@ -3189,6 +3211,31 @@
             .section-title h2 { font-size: 1.8rem; }
             .btn { padding: 0.8rem 1.5rem; }
             .service-options { grid-template-columns: 1fr; }
+
+            /* CALENDAR MOBILE OPTIMIZATION */
+            .calendar-grid {
+                gap: 4px;
+            }
+
+            .calendar-day {
+                padding: 8px 4px;
+                font-size: 0.85rem;
+            }
+
+            .calendar-day-header {
+                padding: 0.75rem 0.25rem;
+                font-size: 0.75rem;
+            }
+
+            .calendar-header h3 {
+                font-size: 1.3rem;
+            }
+
+            .calendar-nav button {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9rem;
+            }
 
             /* FOOTER NEWSLETTER MOBILE */
             .footer-newsletter .newsletter-form {
