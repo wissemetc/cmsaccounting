@@ -120,7 +120,7 @@ Le site utilise EmailJS pour le formulaire de contact.
 1. Placez votre logo dans `assets/images/`
 2. Modifiez le chemin dans `index.html`:
    ```html
-   <img src="assets/images/votre-logo.png" alt="CMS Comptable">
+   <img src="images/votre-logo.png" alt="CMS Comptable">
    ```
 
 ### Modifier les Informations de Contact
