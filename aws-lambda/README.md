@@ -94,9 +94,9 @@ sam deploy \
   --region eu-west-1 \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
-    CalcomApiKey="VOTRE_CLE_API" \
-    CalcomEventTypeId="VOTRE_EVENT_TYPE_ID" \
-    CalcomEventSlug="consultation-30min" \
+    CalcomApiKey="cal_live_22f364deb431c2608b230ed4fbbd68a8" \
+    CalcomEventTypeId="4249503" \
+    CalcomEventSlug="30min" \
   --resolve-s3
 ```
 

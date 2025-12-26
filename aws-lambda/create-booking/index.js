@@ -1,128 +1,95 @@
 /**
- * AWS Lambda Function : Crée une réservation sur Cal.com
+ * AWS Lambda Function : Crée une réservation sur Cal.com (API v1)
  * Compatible avec API Gateway
  */
 
 exports.handler = async (event, context) => {
-    // CORS headers
     const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Content-Type': 'application/json'
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Content-Type": "application/json"
     };
 
-    // Handle preflight OPTIONS request
-    if (event.httpMethod === 'OPTIONS' || event.requestContext?.http?.method === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers,
-            body: ''
-        };
+    // Preflight
+    if (event.httpMethod === "OPTIONS") {
+        return { statusCode: 200, headers, body: "" };
     }
 
     try {
-        const formData = JSON.parse(event.body || '{}');
+        console.log("📥 Received event:", event.body);
+        let formData = {}; try { formData = typeof event.body === "string" ? JSON.parse(event.body) : event.body || {}; } catch (e) { console.error("❌ Failed to parse body:", event.body); }
 
-        // Configuration Cal.com
         const CALCOM_API_KEY = process.env.CALCOM_API_KEY;
-        const CALCOM_EVENT_SLUG = process.env.CALCOM_EVENT_SLUG || 'consultation-30min';
+        const EVENT_TYPE_ID = process.env.CALCOM_EVENT_TYPE_ID; // ← IMPORTANT
 
-        if (!CALCOM_API_KEY) {
+        if (!CALCOM_API_KEY || !EVENT_TYPE_ID) {
             return {
                 statusCode: 500,
                 headers,
                 body: JSON.stringify({
-                    error: 'API key not configured',
-                    success: false
+                    success: false,
+                    error: "Missing CALCOM_API_KEY or CALCOM_EVENT_TYPE_ID"
                 })
             };
         }
 
-        // 1. Récupérer l'ID de l'event type
-        const eventTypesResponse = await fetch('https://api.cal.com/v1/event-types', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${CALCOM_API_KEY}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        // 1️⃣ Construire start & end (UTC ISO)
+        const startLocal = new Date(`${formData.date}T${formData.time}:00`);
+        const start = startLocal.toISOString();
 
-        if (!eventTypesResponse.ok) {
-            throw new Error(`Cal.com API error: ${eventTypesResponse.status}`);
-        }
+        const endLocal = new Date(startLocal.getTime() + 30 * 60000); // 30 minutes
+        const end = endLocal.toISOString();
 
-        const eventTypesData = await eventTypesResponse.json();
-        const eventType = eventTypesData.event_types?.find(et => et.slug === CALCOM_EVENT_SLUG);
-
-        if (!eventType) {
-            return {
-                statusCode: 404,
-                headers,
-                body: JSON.stringify({
-                    error: 'Event type not found',
-                    success: false
-                })
-            };
-        }
-
-        // 2. Construire la date/heure ISO pour Cal.com
-        const [year, month, day] = formData.date.split('-');
-        const [hours, minutes] = formData.time.split(':');
-        const startDateTime = new Date(year, month - 1, day, hours, minutes);
-        const startISO = startDateTime.toISOString();
-
-        // 3. Créer la réservation
+        // 2️⃣ Construire le payload Cal.com
         const bookingData = {
-            eventTypeId: eventType.id,
-            start: startISO,
+            eventTypeId: Number(EVENT_TYPE_ID),
+            start,
+            end,
+            timeZone: "Africa/Tunis",
+            language: "fr",
+
             responses: {
                 name: formData.name,
                 email: formData.email,
-                location: { optionValue: '', value: formData.meetingType || 'Présentiel' }
+                location: {
+                    value: "inPerson",
+                    optionValue: ""
+                }
             },
+
             metadata: {
                 phone: formData.phone,
-                company: formData.company || '',
+                company: formData.company || "",
                 service: formData.service,
                 meetingType: formData.meetingType,
-                message: formData.message || '',
+                message: formData.message || "",
                 appointmentId: formData.appointmentId
-            },
-            timeZone: 'Africa/Tunis',
-            language: 'fr'
+            }
         };
 
-        console.log('Creating booking with data:', JSON.stringify(bookingData, null, 2));
+        console.log("📤 Sending booking:", JSON.stringify(bookingData, null, 2));
 
-        const bookingResponse = await fetch('https://api.cal.com/v1/bookings', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${CALCOM_API_KEY}`,
-                'Content-Type': 'application/json',
-                'cal-api-version': '2024-08-13'
-            },
+        // 3️⃣ Appel API Cal.com (API key dans l’URL)
+        const url = `https://api.cal.com/v1/bookings?apiKey=${CALCOM_API_KEY}`;
+
+        const bookingResponse = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(bookingData)
         });
 
         const responseText = await bookingResponse.text();
-        console.log('Cal.com response:', responseText);
+        console.log("📥 Cal.com response:", responseText);
 
         if (!bookingResponse.ok) {
-            let errorData;
-            try {
-                errorData = JSON.parse(responseText);
-            } catch {
-                errorData = { message: responseText };
-            }
-
             return {
                 statusCode: bookingResponse.status,
                 headers,
                 body: JSON.stringify({
-                    error: 'Booking creation failed',
-                    details: errorData,
-                    success: false
+                    success: false,
+                    error: "Booking creation failed",
+                    details: responseText
                 })
             };
         }
@@ -135,18 +102,18 @@ exports.handler = async (event, context) => {
             body: JSON.stringify({
                 success: true,
                 booking: bookingResult,
-                message: 'Réservation créée avec succès'
+                message: "Réservation créée avec succès"
             })
         };
 
     } catch (error) {
-        console.error('Error:', error);
+        console.error("❌ Error:", error);
         return {
             statusCode: 500,
             headers,
             body: JSON.stringify({
-                error: error.message,
-                success: false
+                success: false,
+                error: error.message
             })
         };
     }
