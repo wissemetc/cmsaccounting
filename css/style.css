@@ -398,7 +398,7 @@
             justify-content: flex-start;
             align-items: center;
             position: relative;
-            gap: 2rem;
+            gap: 1.5rem;
         }
 
         .logo {
@@ -458,10 +458,11 @@
         .nav-menu {
             display: flex;
             list-style: none;
-            gap: var(--spacing-md);
+            gap: var(--spacing-xl);
             align-items: center;
             margin:0;
             padding: 0;
+            flex: 1;
         }
 
         .nav-menu a {
