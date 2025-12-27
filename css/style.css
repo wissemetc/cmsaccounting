@@ -1217,9 +1217,17 @@
         /* ===== SERVICES SECTION ===== */
         .services-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: var(--spacing-xl);
             margin-top: var(--spacing-xl);
+        }
+
+        /* TABLETTE: Services grid en 2 colonnes */
+        @media (max-width: 992px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: var(--spacing-lg);
+            }
         }
 
         /* MOBILE: Services grid en 1 colonne */
