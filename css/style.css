@@ -3064,6 +3064,7 @@
                 gap: var(--spacing-xl);
                 display: flex;
                 flex-direction: column;
+                padding: 0;
             }
             /* CALENDRIER EN PREMIER SUR MOBILE */
             .calendar-widget {
