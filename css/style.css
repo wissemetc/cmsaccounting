@@ -398,7 +398,7 @@
             justify-content: flex-start;
             align-items: center;
             position: relative;
-            gap: 1.5rem;
+            gap: 8.5rem;
         }
 
         .logo {
@@ -458,7 +458,7 @@
         .nav-menu {
             display: flex;
             list-style: none;
-            gap: var(--spacing-xl);
+            gap: var(--spacing-xxl);
             align-items: center;
             margin:0;
             padding: 0;
