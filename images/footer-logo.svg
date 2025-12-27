@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="500" height="200" viewBox="0 0 500 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Light blue gradient for footer contrast -->
+    <linearGradient id="lightBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7DD3FC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38BDF8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer circle -->
+  <path d="M 180 100 A 80 80 0 1 1 20 100 A 80 80 0 1 1 180 100" 
+        fill="none" stroke="white" stroke-width="8" opacity="0.9"/>
+  
+  <!-- Chart bars (left side) -->
+  <rect x="35" y="150" width="12" height="25" fill="url(#lightBlue)"/>
+  <rect x="52" y="135" width="12" height="40" fill="url(#lightBlue)"/>
+  <rect x="69" y="120" width="12" height="55" fill="url(#lightBlue)"/>
+  
+  <!-- Upward trend arrow -->
+  <path d="M 45 80 L 75 50 L 105 80 M 75 50 L 75 85 M 75 50 L 95 70" 
+        stroke="url(#lightBlue)" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Shield with checkmark -->
+  <path d="M 90 85 L 90 140 Q 90 150 100 155 L 120 165 L 140 155 Q 150 150 150 140 L 150 85 Z" 
+        fill="url(#lightBlue)" stroke="none"/>
+  
+  <!-- Checkmark inside shield -->
+  <path d="M 105 115 L 115 125 L 135 100" 
+        stroke="white" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- CMS text (large) -->
+  <text x="210" y="85" font-family="Arial, Helvetica, sans-serif" 
+        font-size="60" font-weight="bold" fill="white" letter-spacing="-1px">CMS</text>
+  
+  <!-- ACCOUNTING text (medium) -->
+  <text x="210" y="115" font-family="Arial, Helvetica, sans-serif" 
+        font-size="28" font-weight="normal" fill="url(#lightBlue)" letter-spacing="2px">ACCOUNTING</text>
+  
+  <!-- SHILI MOHAMED text (small) -->
+  <text x="210" y="140" font-family="Arial, Helvetica, sans-serif" 
+        font-size="18" font-weight="300" fill="#94A3B8" letter-spacing="1px">SHILI MOHAMED</text>
+</svg>
