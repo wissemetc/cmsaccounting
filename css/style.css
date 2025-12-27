@@ -2702,6 +2702,7 @@
         .calendar-header {
             display: flex;
             justify-content: space-between;
+            flex-direction: column;
             align-items: center;
             margin-bottom: var(--spacing-lg);
             padding-bottom: var(--spacing-md);
@@ -3064,6 +3065,7 @@
                 gap: var(--spacing-xl);
                 display: flex;
                 flex-direction: column;
+                padding: 0;
             }
             /* CALENDRIER EN PREMIER SUR MOBILE */
             .calendar-widget {
