@@ -395,9 +395,10 @@
         .nav-container {
             max-width: 100%;
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             position: relative;
+            gap: 2rem;
         }
 
         .logo {
@@ -517,6 +518,7 @@
             padding: 8px;
             border-radius: var(--radius-sm);
             transition: all var(--transition-fast);
+            margin-left: auto;
         }
 
         .mobile-menu-btn:hover {
