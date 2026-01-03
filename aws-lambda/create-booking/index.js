@@ -77,7 +77,18 @@ exports.handler = async (event, context) => {
                 service: formData.service,
                 meetingType: formData.meetingType,
                 message: formData.message || "",
-                appointmentId: formData.appointmentId
+                appointmentId: formData.appointmentId,
+                // Disable all email notifications
+                disableStandardEmails: {
+                    confirmation: {
+                        attendee: true,
+                        host: true
+                    },
+                    all: {
+                        attendee: true,
+                        host: true
+                    }
+                }
             }
         };
 
