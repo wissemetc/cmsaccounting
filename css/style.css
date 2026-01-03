@@ -605,6 +605,9 @@
             z-index: 1099;
             padding: 100px 40px 120px;
             overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
             transition: right var(--menu-speed) var(--menu-easing);
             box-shadow: -5px 0 30px rgba(0, 0, 0, 0.2);
             display: flex;

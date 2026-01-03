@@ -516,11 +516,13 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             document.getElementById('mobileMenuOverlay').classList.add('active');
             document.getElementById('mobileMenuContainer').classList.add('active');
             document.body.classList.add('menu-open');
-            document.body.style.overflow = 'hidden';
-            
-            // Empêcher le défilement de l'arrière-plan
-            document.addEventListener('touchmove', preventScroll, { passive: false });
-            
+
+            // Prevent body scroll but allow menu scroll
+            const scrollY = window.scrollY;
+            document.body.style.position = 'fixed';
+            document.body.style.top = `-${scrollY}px`;
+            document.body.style.width = '100%';
+
             // Focus trap pour l'accessibilité
             trapFocus(document.getElementById('mobileMenuContainer'));
         }
@@ -531,11 +533,14 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
             document.getElementById('mobileMenuOverlay').classList.remove('active');
             document.getElementById('mobileMenuContainer').classList.remove('active');
             document.body.classList.remove('menu-open');
-            document.body.style.overflow = '';
-            
-            // Réactiver le défilement
-            document.removeEventListener('touchmove', preventScroll);
-            
+
+            // Restore body scroll
+            const scrollY = document.body.style.top;
+            document.body.style.position = '';
+            document.body.style.top = '';
+            document.body.style.width = '';
+            window.scrollTo(0, parseInt(scrollY || '0') * -1);
+
             // Retourner le focus au bouton du menu
             setTimeout(() => {
                 document.getElementById('mobileMenuBtn').focus();
@@ -543,7 +548,8 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
         }
 
         function preventScroll(e) {
-            e.preventDefault();
+            // This function is no longer needed, but kept for compatibility
+            // Scrolling inside menu is now allowed via CSS
         }
 
         function trapFocus(element) {
