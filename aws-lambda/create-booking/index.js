@@ -34,9 +34,6 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 1️⃣ Convert local time (Africa/Tunis = UTC+1) to UTC
-        // Cal.com expects UTC times, then uses timeZone parameter to display correctly
-        const TUNIS_OFFSET_HOURS = 1; // Africa/Tunis is UTC+1
 
         // Parse local time and convert to UTC
         const localDateTime = new Date(`${formData.date}T${formData.time}:00+01:00`);
