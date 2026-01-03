@@ -454,7 +454,6 @@ Le statut peut être radié pour non-paiement pendant 4 trimestres, absence de d
                 { href: '#services', text: 'Nos Services', icon: 'fas fa-briefcase' },
                
                 { href: '#processus', text: 'Processus', icon: 'fas fa-cogs' },
-                { href: '#actualites', text: 'Actualités', icon: 'fas fa-newspaper' },
                 { href: '#rendezvous', text: 'Rendez-vous', icon: 'fas fa-calendar-check' },
                 { href: '#contact', text: 'Contact', icon: 'fas fa-envelope' }
             ];
@@ -2001,3 +2000,4 @@ L'équipe ${APPOINTMENT_CONFIG.SITE_NAME}`
         console.log('📞 Top bar avec contact et badge OCT activée');
         console.log('📅 Calendrier amélioré activé');
         console.log('📢 Système de partage des actualités SIMPLIFIÉ activé');
+
