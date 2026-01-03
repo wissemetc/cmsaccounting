@@ -34,25 +34,29 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 1️⃣ Construire start & end (local time format, not UTC)
-        // Cal.com API expects times in the specified timezone, not UTC
-        const startLocal = new Date(`${formData.date}T${formData.time}:00`);
+        // 1️⃣ Construire start & end with timezone offset for Africa/Tunis (UTC+1)
+        // Cal.com interprets times without timezone info as UTC, so we need to include the offset
+        const TUNIS_OFFSET = '+01:00'; // Africa/Tunis is UTC+1
 
-        // Format as local ISO string (YYYY-MM-DDTHH:mm:ss) without 'Z' suffix
-        const formatLocalDateTime = (date) => {
+        // Build start datetime with timezone offset
+        const start = `${formData.date}T${formData.time}:00${TUNIS_OFFSET}`;
+
+        // Calculate end time (30 minutes later)
+        const startDate = new Date(`${formData.date}T${formData.time}:00${TUNIS_OFFSET}`);
+        const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 minutes
+
+        // Format end datetime with timezone offset
+        const formatWithOffset = (date) => {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             const hours = String(date.getHours()).padStart(2, '0');
             const minutes = String(date.getMinutes()).padStart(2, '0');
             const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${TUNIS_OFFSET}`;
         };
 
-        const start = formatLocalDateTime(startLocal);
-
-        const endLocal = new Date(startLocal.getTime() + 30 * 60000); // 30 minutes
-        const end = formatLocalDateTime(endLocal);
+        const end = formatWithOffset(endDate);
 
         // 2️⃣ Construire le payload Cal.com
         const bookingData = {
