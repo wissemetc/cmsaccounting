@@ -34,12 +34,25 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 1️⃣ Construire start & end (UTC ISO)
+        // 1️⃣ Construire start & end (local time format, not UTC)
+        // Cal.com API expects times in the specified timezone, not UTC
         const startLocal = new Date(`${formData.date}T${formData.time}:00`);
-        const start = startLocal.toISOString();
+
+        // Format as local ISO string (YYYY-MM-DDTHH:mm:ss) without 'Z' suffix
+        const formatLocalDateTime = (date) => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+        };
+
+        const start = formatLocalDateTime(startLocal);
 
         const endLocal = new Date(startLocal.getTime() + 30 * 60000); // 30 minutes
-        const end = endLocal.toISOString();
+        const end = formatLocalDateTime(endLocal);
 
         // 2️⃣ Construire le payload Cal.com
         const bookingData = {
