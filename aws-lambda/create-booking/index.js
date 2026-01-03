@@ -61,6 +61,7 @@ exports.handler = async (event, context) => {
             end,
             timeZone: "Africa/Tunis",
             language: "fr",
+            noEmail: true, // Disable all email notifications
 
             responses: {
                 name: formData.name,
@@ -77,18 +78,7 @@ exports.handler = async (event, context) => {
                 service: formData.service,
                 meetingType: formData.meetingType,
                 message: formData.message || "",
-                appointmentId: formData.appointmentId,
-                // Disable all email notifications
-                disableStandardEmails: {
-                    confirmation: {
-                        attendee: true,
-                        host: true
-                    },
-                    all: {
-                        attendee: true,
-                        host: true
-                    }
-                }
+                appointmentId: formData.appointmentId
             }
         };
 
