@@ -34,29 +34,23 @@ exports.handler = async (event, context) => {
             };
         }
 
-        // 1️⃣ Construire start & end with timezone offset for Africa/Tunis (UTC+1)
-        // Cal.com interprets times without timezone info as UTC, so we need to include the offset
-        const TUNIS_OFFSET = '+01:00'; // Africa/Tunis is UTC+1
+        // 1️⃣ Convert local time (Africa/Tunis = UTC+1) to UTC
+        // Cal.com expects UTC times, then uses timeZone parameter to display correctly
+        const TUNIS_OFFSET_HOURS = 1; // Africa/Tunis is UTC+1
 
-        // Build start datetime with timezone offset
-        const start = `${formData.date}T${formData.time}:00${TUNIS_OFFSET}`;
+        // Parse local time and convert to UTC
+        const localDateTime = new Date(`${formData.date}T${formData.time}:00+01:00`);
 
-        // Calculate end time (30 minutes later)
-        const startDate = new Date(`${formData.date}T${formData.time}:00${TUNIS_OFFSET}`);
-        const endDate = new Date(startDate.getTime() + 30 * 60000); // 30 minutes
-
-        // Format end datetime with timezone offset
-        const formatWithOffset = (date) => {
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${TUNIS_OFFSET}`;
+        // Format as UTC ISO string (YYYY-MM-DDTHH:mm:ssZ)
+        const formatUTC = (date) => {
+            return date.toISOString().slice(0, 19) + 'Z';
         };
 
-        const end = formatWithOffset(endDate);
+        const start = formatUTC(localDateTime);
+
+        // Calculate end time (30 minutes later in UTC)
+        const endDateTime = new Date(localDateTime.getTime() + 30 * 60000);
+        const end = formatUTC(endDateTime);
 
         // 2️⃣ Construire le payload Cal.com
         const bookingData = {
