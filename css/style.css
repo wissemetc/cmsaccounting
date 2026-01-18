@@ -188,7 +188,7 @@
             }
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 450px) {
             .container {
                 padding: 0 0.75rem; /* 12px sur très petits écrans */
             }
@@ -3443,3 +3443,4 @@
             opacity: 1;
             transform: translateY(0);
         }
+
