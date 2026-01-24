@@ -1,7 +1,10 @@
 /**
- * AWS Lambda Function : Crée une réservation sur Cal.com (API v1)
+ * AWS Lambda Function : Crée une réservation sur Google Calendar
  * Compatible avec API Gateway
+ * Utilise Events API pour créer des événements
  */
+
+const { google } = require('googleapis');
 
 exports.handler = async (event, context) => {
     const headers = {
@@ -18,98 +21,118 @@ exports.handler = async (event, context) => {
 
     try {
         console.log("📥 Received event:", event.body);
-        let formData = {}; try { formData = typeof event.body === "string" ? JSON.parse(event.body) : event.body || {}; } catch (e) { console.error("❌ Failed to parse body:", event.body); }
+        let formData = {};
+        try {
+            formData = typeof event.body === "string" ? JSON.parse(event.body) : event.body || {};
+        } catch (e) {
+            console.error("❌ Failed to parse body:", event.body);
+        }
 
-        const CALCOM_API_KEY = process.env.CALCOM_API_KEY;
-        const EVENT_TYPE_ID = process.env.CALCOM_EVENT_TYPE_ID; // ← IMPORTANT
+        const GOOGLE_CALENDAR_ID = process.env.GOOGLE_CALENDAR_ID;
+        const GOOGLE_SERVICE_ACCOUNT_KEY = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
-        if (!CALCOM_API_KEY || !EVENT_TYPE_ID) {
+        if (!GOOGLE_CALENDAR_ID || !GOOGLE_SERVICE_ACCOUNT_KEY) {
             return {
                 statusCode: 500,
                 headers,
                 body: JSON.stringify({
                     success: false,
-                    error: "Missing CALCOM_API_KEY or CALCOM_EVENT_TYPE_ID"
+                    error: "Missing GOOGLE_CALENDAR_ID or GOOGLE_SERVICE_ACCOUNT_KEY"
                 })
             };
         }
 
-
-        // Parse local time and convert to UTC
+        /* ===========================
+           1️⃣ Parse local time and convert to ISO
+        =========================== */
         const localDateTime = new Date(`${formData.date}T${formData.time}:00+01:00`);
 
-        // Format as UTC ISO string (YYYY-MM-DDTHH:mm:ssZ)
-        const formatUTC = (date) => {
-            return date.toISOString().slice(0, 19) + 'Z';
-        };
+        // Format as ISO string for Google Calendar
+        const start = localDateTime.toISOString();
 
-        const start = formatUTC(localDateTime);
-
-        // Calculate end time (30 minutes later in UTC)
+        // Calculate end time (30 minutes later)
         const endDateTime = new Date(localDateTime.getTime() + 30 * 60000);
-        const end = formatUTC(endDateTime);
+        const end = endDateTime.toISOString();
 
-        // 2️⃣ Construire le payload Cal.com
-        const bookingData = {
-            eventTypeId: Number(EVENT_TYPE_ID),
-            start,
-            end,
-            timeZone: "Africa/Tunis",
-            language: "fr",
+        /* ===========================
+           2️⃣ Setup Google Calendar Auth
+        =========================== */
+        const credentials = JSON.parse(GOOGLE_SERVICE_ACCOUNT_KEY);
 
-            responses: {
-                name: formData.name,
-                email: formData.email,
-                location: {
-                    value: "inPerson",
-                    optionValue: ""
-                }
-            },
-
-            metadata: {
-                phone: formData.phone,
-                company: formData.company || "",
-                service: formData.service,
-                meetingType: formData.meetingType,
-                message: formData.message || "",
-                appointmentId: formData.appointmentId
-            }
-        };
-
-        console.log("📤 Sending booking:", JSON.stringify(bookingData, null, 2));
-
-        // 3️⃣ Appel API Cal.com (API key dans l’URL)
-        const url = `https://api.cal.com/v1/bookings?apiKey=${CALCOM_API_KEY}`;
-
-        const bookingResponse = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(bookingData)
+        const auth = new google.auth.GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/calendar'],
         });
 
-        const responseText = await bookingResponse.text();
-        console.log("📥 Cal.com response:", responseText);
+        const calendar = google.calendar({ version: 'v3', auth });
 
-        if (!bookingResponse.ok) {
-            return {
-                statusCode: bookingResponse.status,
-                headers,
-                body: JSON.stringify({
-                    success: false,
-                    error: "Booking creation failed",
-                    details: responseText
-                })
-            };
-        }
+        /* ===========================
+           3️⃣ Build Google Calendar Event
+        =========================== */
+        const eventData = {
+            summary: `Consultation - ${formData.name}`,
+            description: buildEventDescription(formData),
+            start: {
+                dateTime: start,
+                timeZone: 'Africa/Tunis',
+            },
+            end: {
+                dateTime: end,
+                timeZone: 'Africa/Tunis',
+            },
+            attendees: [
+                { email: formData.email, displayName: formData.name }
+            ],
+            extendedProperties: {
+                private: {
+                    phone: formData.phone || '',
+                    company: formData.company || '',
+                    service: formData.service || '',
+                    meetingType: formData.meetingType || '',
+                    appointmentId: formData.appointmentId || '',
+                }
+            },
+            reminders: {
+                useDefault: false,
+                overrides: [
+                    { method: 'email', minutes: 24 * 60 }, // 1 jour avant
+                    { method: 'email', minutes: 60 },       // 1 heure avant
+                ],
+            },
+            // Notifications par email
+            sendUpdates: 'all', // Envoie des emails aux participants
+        };
 
-        const bookingResult = JSON.parse(responseText);
+        console.log("📤 Creating Google Calendar event:", JSON.stringify(eventData, null, 2));
 
+        /* ===========================
+           4️⃣ Create event via Google Calendar API
+        =========================== */
+        const response = await calendar.events.insert({
+            calendarId: GOOGLE_CALENDAR_ID,
+            requestBody: eventData,
+            sendUpdates: 'all', // Envoie des notifications
+        });
+
+        console.log("✅ Event created:", response.data.id);
+
+        /* ===========================
+           5️⃣ Return success response (format compatible with frontend)
+        =========================== */
         return {
             statusCode: 200,
             headers,
             body: JSON.stringify({
                 success: true,
-                booking: bookingResult,
+                booking: {
+                    id: response.data.id,
+                    uid: response.data.id,
+                    htmlLink: response.data.htmlLink,
+                    status: response.data.status,
+                    created: response.data.created,
+                    start: response.data.start,
+                    end: response.data.end,
+                },
                 message: "Réservation créée avec succès"
             })
         };
@@ -121,8 +144,56 @@ exports.handler = async (event, context) => {
             headers,
             body: JSON.stringify({
                 success: false,
-                error: error.message
+                error: error.message,
+                details: error.errors || []
             })
         };
     }
 };
+
+/**
+ * Construit la description de l'événement avec toutes les informations
+ * @param {Object} formData - Données du formulaire
+ * @returns {string} Description formatée
+ */
+function buildEventDescription(formData) {
+    const lines = [
+        `📋 DÉTAILS DE LA CONSULTATION`,
+        ``,
+        `👤 Client: ${formData.name}`,
+        `📧 Email: ${formData.email}`,
+    ];
+
+    if (formData.phone) {
+        lines.push(`📞 Téléphone: ${formData.phone}`);
+    }
+
+    if (formData.company) {
+        lines.push(`🏢 Entreprise: ${formData.company}`);
+    }
+
+    if (formData.service) {
+        lines.push(`💼 Service: ${formData.service}`);
+    }
+
+    if (formData.meetingType) {
+        lines.push(`🎯 Type de rendez-vous: ${formData.meetingType}`);
+    }
+
+    if (formData.message) {
+        lines.push(``);
+        lines.push(`💬 Message:`);
+        lines.push(formData.message);
+    }
+
+    if (formData.appointmentId) {
+        lines.push(``);
+        lines.push(`🆔 ID Rendez-vous: ${formData.appointmentId}`);
+    }
+
+    lines.push(``);
+    lines.push(`---`);
+    lines.push(`📅 Réservation effectuée via cmsaccounting.tn`);
+
+    return lines.join('\n');
+}

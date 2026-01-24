@@ -1,0 +1,19 @@
+{
+  "name": "google-calendar-create-booking",
+  "version": "1.0.0",
+  "description": "AWS Lambda function to create bookings in Google Calendar",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "aws-lambda",
+    "google-calendar",
+    "booking"
+  ],
+  "author": "CMS Accounting",
+  "license": "ISC",
+  "dependencies": {
+    "googleapis": "^131.0.0"
+  }
+}

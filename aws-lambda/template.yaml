@@ -1,19 +1,16 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Cal.com Integration - Lambda Functions avec API Gateway
+Description: Google Calendar Integration - Lambda Functions avec API Gateway
 
 Parameters:
-  CalcomApiKey:
+  GoogleCalendarId:
     Type: String
-    Description: Clé API Cal.com
+    Description: ID du Google Calendar (ex. xxxxx@group.calendar.google.com)
+    NoEcho: false
+  GoogleServiceAccountKey:
+    Type: String
+    Description: Clé JSON du Service Account Google (contenu complet du fichier JSON)
     NoEcho: true
-  CalcomEventTypeId:
-    Type: String
-    Description: ID du type d'événement Cal.com
-  CalcomEventSlug:
-    Type: String
-    Description: Slug de l'événement Cal.com
-    Default: consultation-30min
 
 Globals:
   Function:
@@ -22,9 +19,8 @@ Globals:
     MemorySize: 256
     Environment:
       Variables:
-        CALCOM_API_KEY: !Ref CalcomApiKey
-        CALCOM_EVENT_TYPE_ID: !Ref CalcomEventTypeId
-        CALCOM_EVENT_SLUG: !Ref CalcomEventSlug
+        GOOGLE_CALENDAR_ID: !Ref GoogleCalendarId
+        GOOGLE_SERVICE_ACCOUNT_KEY: !Ref GoogleServiceAccountKey
   Api:
     Cors:
       AllowMethods: "'GET,POST,OPTIONS'"
@@ -36,39 +32,39 @@ Resources:
   GetAvailabilityFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: calcom-get-availability
+      FunctionName: google-calendar-get-availability
       CodeUri: get-availability/
       Handler: index.handler
-      Description: Récupère les disponibilités Cal.com
+      Description: Récupère les disponibilités Google Calendar
       Events:
         GetAvailabilityApi:
           Type: Api
           Properties:
             Path: /get-availability
             Method: POST
-            RestApiId: !Ref CalcomApi
+            RestApiId: !Ref GoogleCalendarApi
 
   # Lambda Function : Create Booking
   CreateBookingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: calcom-create-booking
+      FunctionName: google-calendar-create-booking
       CodeUri: create-booking/
       Handler: index.handler
-      Description: Crée une réservation Cal.com
+      Description: Crée une réservation Google Calendar
       Events:
         CreateBookingApi:
           Type: Api
           Properties:
             Path: /create-booking
             Method: POST
-            RestApiId: !Ref CalcomApi
+            RestApiId: !Ref GoogleCalendarApi
 
   # API Gateway
-  CalcomApi:
+  GoogleCalendarApi:
     Type: AWS::Serverless::Api
     Properties:
-      Name: CalcomIntegrationAPI
+      Name: GoogleCalendarIntegrationAPI
       StageName: prod
       Cors:
         AllowMethods: "'GET,POST,OPTIONS'"
@@ -78,14 +74,14 @@ Resources:
 Outputs:
   ApiEndpoint:
     Description: "URL de base de l'API Gateway"
-    Value: !Sub "https://${CalcomApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Value: !Sub "https://${GoogleCalendarApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
     Export:
-      Name: CalcomApiEndpoint
+      Name: GoogleCalendarApiEndpoint
 
   GetAvailabilityUrl:
     Description: "URL pour récupérer les disponibilités"
-    Value: !Sub "https://${CalcomApi}.execute-api.${AWS::Region}.amazonaws.com/prod/get-availability"
+    Value: !Sub "https://${GoogleCalendarApi}.execute-api.${AWS::Region}.amazonaws.com/prod/get-availability"
 
   CreateBookingUrl:
     Description: "URL pour créer une réservation"
-    Value: !Sub "https://${CalcomApi}.execute-api.${AWS::Region}.amazonaws.com/prod/create-booking"
+    Value: !Sub "https://${GoogleCalendarApi}.execute-api.${AWS::Region}.amazonaws.com/prod/create-booking"

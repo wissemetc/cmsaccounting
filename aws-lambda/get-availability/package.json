@@ -1,0 +1,19 @@
+{
+  "name": "google-calendar-get-availability",
+  "version": "1.0.0",
+  "description": "AWS Lambda function to get availability from Google Calendar",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "aws-lambda",
+    "google-calendar",
+    "availability"
+  ],
+  "author": "CMS Accounting",
+  "license": "ISC",
+  "dependencies": {
+    "googleapis": "^131.0.0"
+  }
+}
