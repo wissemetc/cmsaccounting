@@ -80,11 +80,11 @@ exports.handler = async (event, context) => {
                 dateTime: end,
                 timeZone: 'Africa/Tunis',
             },
-            attendees: [
-                { email: formData.email, displayName: formData.name }
-            ],
+            // Note: attendees removed - Service Accounts cannot invite without Domain-Wide Delegation
+            // Client email is stored in description and extendedProperties instead
             extendedProperties: {
                 private: {
+                    email: formData.email || '',
                     phone: formData.phone || '',
                     company: formData.company || '',
                     service: formData.service || '',
@@ -95,12 +95,10 @@ exports.handler = async (event, context) => {
             reminders: {
                 useDefault: false,
                 overrides: [
-                    { method: 'email', minutes: 24 * 60 }, // 1 jour avant
-                    { method: 'email', minutes: 60 },       // 1 heure avant
+                    { method: 'popup', minutes: 24 * 60 }, // 1 jour avant
+                    { method: 'popup', minutes: 60 },       // 1 heure avant
                 ],
             },
-            // Notifications par email
-            sendUpdates: 'all', // Envoie des emails aux participants
         };
 
         console.log("📤 Creating Google Calendar event:", JSON.stringify(eventData, null, 2));
@@ -111,7 +109,6 @@ exports.handler = async (event, context) => {
         const response = await calendar.events.insert({
             calendarId: GOOGLE_CALENDAR_ID,
             requestBody: eventData,
-            sendUpdates: 'all', // Envoie des notifications
         });
 
         console.log("✅ Event created:", response.data.id);
